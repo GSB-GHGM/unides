@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>ÜNİDES COP31 Nakit Takip</title>
+<meta name="author" content="AHMET KÜÇÜKYAĞCI">
+<meta name="theme-color" content="#1f3864">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --lac:#1F3864; --lac2:#2E5597; --zemin:#F4F6FA; --kart:#FFFFFF; --cizgi:#DCE1EA; --yazi:#1B2333; --soluk:#5B6475;
+  --sari:#FFF4CC; --sariK:#E9B000; --yesil:#E3F4E6; --yesilK:#1E7B34; --kirmizi:#FBE3DF; --kirmiziK:#B42318;
+  --mavi:#E3ECFA; --maviK:#2457A6; --gri:#EEF0F4; --turuncu:#FDEBDD; --turuncuK:#B5530F;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--zemin);color:var(--yazi);font:15px/1.45 -apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:20;background:var(--lac);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 16px}
+header h1{font-size:16px;margin:0;font-weight:600;flex:1;line-height:1.2}
+header h1 small{display:block;font-weight:400;opacity:.75;font-size:12px}
+.hbtn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,.24)}
+main{max-width:1100px;margin:0 auto;padding:14px 16px 110px}
+.kartlar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--kart);border:1px solid var(--cizgi);border-radius:12px;padding:12px}
+.kpi b{display:block;font-size:19px;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--soluk)}
+.kpi.vurgu{border-color:#9FD3AA;background:var(--yesil)}
+.cipler{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.cip{border:1px solid var(--cizgi);background:var(--kart);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer}
+.cip.secili{background:var(--lac);color:#fff;border-color:var(--lac)}
+.ara{width:100%;padding:10px 12px;border:1px solid var(--cizgi);border-radius:10px;background:#fff;margin-bottom:10px}
+.liste{display:grid;gap:8px}
+.ilkart{background:var(--kart);border:1px solid var(--cizgi);border-radius:12px;padding:10px 12px;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.ilkart:hover{border-color:var(--lac2)}
+.ilkart .ad{font-weight:600}
+.ilkart .alt{font-size:12.5px;color:var(--soluk);grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px}
+.rozet{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.d1{background:var(--gri);color:#444}.d2{background:var(--kirmizi);color:var(--kirmiziK)}.d3{background:var(--sari);color:#7A5B00}
+.d4{background:var(--mavi);color:var(--maviK)}.d5{background:var(--turuncu);color:var(--turuncuK)}.d6{background:var(--yesil);color:var(--yesilK)}
+.a1{background:var(--sari);color:#7A5B00}.a2{background:var(--mavi);color:var(--maviK)}.a3{background:var(--yesil);color:var(--yesilK)}
+.para{font-variant-numeric:tabular-nums}
+.bos{color:var(--soluk);text-align:center;padding:30px}
+/* panel */
+.ort{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:40;display:none;align-items:flex-end;justify-content:center}
+.ort.acik{display:flex}
+/* Sayfa içine gömülü ve çerçeve ekrandan uzunsa (Google Sites, bilgisayar): pencereler tıklanan yerin yanında açılır */
+body.uzun .ort{position:absolute;inset:auto;top:0;left:0;right:0;align-items:flex-start}
+body.uzun .panel{max-height:640px;border-radius:16px;box-shadow:0 12px 40px rgba(15,23,42,.35)}
+body.uzun .kaydetbar{position:static;border:1px solid var(--cizgi);border-radius:12px;margin:0 auto 16px;max-width:760px}
+body.uzun .toast{position:absolute;bottom:auto}
+body.uzun .yukleniyor{position:absolute;align-items:flex-start}
+.panel{background:var(--zemin);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:0 0 20px}
+@media(min-width:760px){.ort{align-items:center}.panel{border-radius:16px}}
+.panel .ust{position:sticky;top:0;background:var(--kart);border-bottom:1px solid var(--cizgi);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:2}
+.panel .ust h2{margin:0;font-size:17px;flex:1}
+.kapat{border:0;background:var(--gri);border-radius:8px;width:34px;height:34px;font-size:18px;cursor:pointer}
+.ic{padding:12px 16px}
+table.t{width:100%;border-collapse:collapse;background:var(--kart);border:1px solid var(--cizgi);border-radius:10px;overflow:hidden;font-size:13.5px}
+table.t th,table.t td{padding:7px 8px;border-bottom:1px solid var(--cizgi);text-align:left;vertical-align:top}
+table.t th{background:var(--gri);font-size:12px;color:var(--soluk);font-weight:600}
+table.t td.s{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.satirlar{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;background:var(--kart);border:1px solid var(--cizgi);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.satirlar span{color:var(--soluk)}
+/* veri girişi */
+.ilsec{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.ilsec select{flex:1;padding:11px 12px;border:1px solid var(--cizgi);border-radius:10px;background:#fff;font-size:16px}
+.uyarit{background:var(--turuncu);border:1px solid #F3C49B;color:#7A3A06;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:14px}
+.bolum{background:var(--kart);border:1px solid var(--cizgi);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.bolum>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.bolum>summary::-webkit-details-marker{display:none}
+.bolum>summary::before{content:"▸";color:var(--soluk);transition:transform .15s}
+.bolum[open]>summary::before{transform:rotate(90deg)}
+.bolum>summary .sag{margin-left:auto;font-weight:400}
+.bolum .gov{padding:4px 14px 14px;border-top:1px solid var(--cizgi)}
+.alan{margin-top:12px}
+.alan>label{display:block;font-size:13px;color:var(--soluk);margin-bottom:5px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--cizgi);background:#fff;border-radius:9px;padding:9px 14px;cursor:pointer;min-width:84px}
+.seg button.on{background:var(--lac);border-color:var(--lac);color:#fff}
+.seg button.on.kirmizi{background:var(--kirmiziK);border-color:var(--kirmiziK)}
+input.g,select.g,textarea.g{width:100%;padding:10px 11px;border:1px solid var(--cizgi);border-radius:9px;background:#FFFDF3;font-size:16px}
+input.g:focus,select.g:focus,textarea.g:focus{outline:2px solid var(--lac2);outline-offset:0;background:#fff}
+.iki{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.proje{border:1px solid var(--cizgi);border-radius:10px;margin-top:10px;overflow:hidden}
+.proje>summary{list-style:none;cursor:pointer;padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:start}
+.proje>summary::-webkit-details-marker{display:none}
+.proje .no{font-weight:700;color:var(--lac2);min-width:26px}
+.proje .pad{font-size:14px}
+.proje .pad small{display:block;color:var(--soluk);font-size:12px}
+.proje .gov{padding:2px 12px 12px;border-top:1px dashed var(--cizgi);background:#FCFCFD}
+.kodlar{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.kodlar label{font-size:11.5px;color:var(--soluk);display:block;margin-bottom:3px;text-align:center}
+.kodlar input{text-align:right;padding:9px 7px}
+@media(max-width:560px){.kodlar{grid-template-columns:repeat(2,1fr)}.kodlar>div:last-child{grid-column:1/-1}}
+.hesap{margin-top:8px;font-size:13px;color:var(--soluk);display:flex;flex-wrap:wrap;gap:4px 14px}
+.hesap b{color:var(--yazi)}
+.uy{color:var(--kirmiziK);font-weight:600;font-size:13px;margin-top:6px}
+.kaydetbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--kart);border-top:1px solid var(--cizgi);padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:center}
+.kaydetbar .durumyazi{font-size:13px;color:var(--soluk);flex:1;max-width:520px}
+.btn{border:0;border-radius:10px;padding:12px 22px;font-weight:600;cursor:pointer}
+.btn.ana{background:var(--lac);color:#fff}
+.btn.ana:disabled{background:#9AA6BC;cursor:default}
+.btn.ikincil{background:var(--gri)}
+.form{background:var(--kart);border:1px solid var(--cizgi);border-radius:14px;padding:18px;max-width:380px;margin:30px auto}
+.form h2{margin:0 0 6px;font-size:18px}
+.form p{margin:0 0 14px;color:var(--soluk);font-size:13.5px}
+.form .alan:first-of-type{margin-top:0}
+.hata{color:var(--kirmiziK);font-size:13.5px;margin-top:10px;min-height:1em}
+.ayrac{text-align:center;color:var(--soluk);font-size:12px;margin:16px 0 10px}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#1B2333;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;font-size:14px;display:none;max-width:90vw}
+.yukleniyor{position:fixed;inset:0;background:rgba(244,246,250,.7);z-index:70;display:none;align-items:center;justify-content:center;font-weight:600;color:var(--lac)}
+.yukleniyor.acik{display:flex}
+.sekmeler{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.sekmeler button{border:1px solid var(--cizgi);background:#fff;border-radius:9px;padding:8px 14px;cursor:pointer}
+.sekmeler button.on{background:var(--lac);color:#fff;border-color:var(--lac)}
+.kucuk{font-size:12.5px;color:var(--soluk)}
+.altkutu{border:1px solid var(--cizgi);border-radius:10px;padding:4px 12px 12px;margin-top:12px;background:#FAFBFD}
+.altkutu.yesilkutu{background:#EEF8F0;border-color:#9FD3AA}
+.altkutu.mavikutu{background:#EEF3FB;border-color:#A9C1E8}
+.altbaslik{font-weight:600;font-size:14px;color:var(--lac);margin-top:8px}
+a{color:var(--lac2)}
+</style>
+</head>
+<body>
+<header>
+  <h1>ÜNİDES COP31 Nakit Takip<small id="altbaslik">Gözlemci ekranı</small></h1>
+  <button class="hbtn" id="girisBtn" onclick="girisAc()">Giriş</button>
+</header>
+<main id="ana"><div class="bos">Yükleniyor…</div></main>
+<div class="kaydetbar" id="kaydetbar" style="display:none">
+  <div class="durumyazi" id="kaydetyazi"></div>
+  <button class="btn ana" id="kaydetBtn" onclick="kaydet()">Kaydet</button>
+</div>
+<div class="ort" id="ort" onclick="if(event.target===this)panelKapat()"><div class="panel" id="panel"></div></div>
+<div class="toast" id="toast"></div>
+<div class="yukleniyor" id="yuk"><span id="yukyazi">Kaydediliyor…</span></div>
+
+<script>
+/* ===================== DURUM ===================== */
+const S = { veri:null, oturum:null, gorunum:'gozlemci', filtre:'', ara:'', il:'', taslak:null, degisti:false, nabizT:null, sekme:'giris' };
+const KOD = ['03.02','03.03','03.05','06.01','DİĞER'];
+const KODAD = ['Mal-Malzeme','Yolluk','Hizmet Alımı','Mamul Mal','&nbsp;'];
+try{ const o = JSON.parse(sessionStorage.getItem('unides_oturum')||'null'); if(o) S.oturum=o; }catch(e){}
+try{ uzunAyarla(); }catch(e){}
+
+/* ===================== YARDIMCI ===================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tl = n => (n===''||n==null||isNaN(n)) ? '—' : Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';
+const tl0 = n => (n===''||n==null||isNaN(n)) ? '—' : Number(n).toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺';
+const yz = n => (n===''||n==null||isNaN(n)) ? '' : '%'+Math.round(n*100);
+const trTarih = s => { const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||''); return m? m[3]+'.'+m[2]+'.'+m[1] : (s||''); };
+function sayiOku(v){
+  v = String(v==null?'':v).trim().replace(/\s|₺|TL/gi,'');
+  if(v==='') return '';
+  if(v.indexOf(',')>=0){ v=v.replace(/\./g,'').replace(',','.'); }
+  else if(/^\d{1,3}(\.\d{3})+$/.test(v)){ v=v.replace(/\./g,''); }
+  const n=Number(v); return isFinite(n)&&n>=0 ? Math.round(n*100)/100 : NaN;
+}
+const sayiYaz = n => (n===''||n==null||isNaN(n)) ? (n==null?'':String(n)) : Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2});
+/* Tutar yazılırken binlik noktaları kendiliğinden koyar: 50000 → 50.000, 1500,5 → 1.500,5 */
+function sayiGir(el){
+  const v=el.value, sonda = el.selectionStart===v.length;
+  const m=/^([\d.]*)(,\d{0,2})?$/.exec(v.replace(/\s/g,''));
+  if(!m) return;
+  const tam=m[1].replace(/\./g,''); if(tam===''&&!m[2]) return;
+  const yeni=(tam===''?'':Number(tam).toLocaleString('tr-TR'))+(m[2]||'');
+  if(yeni!==v){ el.value=yeni; if(sonda) el.setSelectionRange(yeni.length,yeni.length); }
+}
+function dk(d){ const m=/^(\d)\s·/.exec(d||''); return m?m[1]:''; }
+/* Gömülü çerçeve ekrandan uzun mu? (Google Sites bilgisayar görünümü) */
+let sonY=0;
+document.addEventListener('pointerdown',e=>{ sonY=e.pageY; },true);
+function uzunMu(){ let g=false; try{ g = window.self!==window.top; }catch(e){ g=true; } return g && innerHeight > (screen.availHeight||900)*0.95; }
+function uzunAyarla(){ document.body.classList.toggle('uzun', uzunMu()); }
+window.addEventListener('resize', uzunAyarla);
+function gorunurY(ek){ return Math.max(10, sonY-(ek||160)); }
+function panelAc(){
+  const o=$('ort'), p=$('panel'); uzunAyarla(); o.classList.add('acik');
+  if(document.body.classList.contains('uzun')){ const ust=gorunurY(90); p.style.marginTop=ust+'px'; o.style.minHeight=Math.max(document.documentElement.scrollHeight, ust+700)+'px'; p.scrollTop=0; setTimeout(()=>{ try{ p.scrollIntoView({block:'nearest',behavior:'smooth'}); }catch(e){} },30); }
+  else { p.style.marginTop=''; o.style.minHeight=''; }
+}
+function toast(m,sn){ const t=$('toast'); t.textContent=m; t.style.display='block'; t.style.top = document.body.classList.contains('uzun') ? (gorunurY(40))+'px' : ''; clearTimeout(t._z); t._z=setTimeout(()=>t.style.display='none',sn||3500); }
+function yuk(a,m){ $('yuk').classList.toggle('acik',!!a); $('yuk').style.paddingTop = document.body.classList.contains('uzun') ? gorunurY(40)+'px' : ''; if(m) $('yukyazi').textContent=m; }
+const API_URL='https://script.google.com/macros/s/AKfycbxQoFHm88tA-SYPd2JHbHiZ4fCv_AmQS4rQ6Zf3A1NJOJ_4aTRZJdDEC0cqmmcgS2oXaw/exec';
+function cagir(fn,args,ok,hata){
+  const hataYap=e=>{
+    yuk(false);
+    const m=String(e&&e.message||e);
+    if(m.indexOf('OTURUM:')>=0){ oturumBitir(); toast('Oturum süresi doldu, yeniden giriş yapın.'); return; }
+    (hata||(x=>toast('Hata: '+x)))(m);
+  };
+  fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:args||[]})})
+    .then(r=>r.json()).then(c=>{ if(c.ok) ok&&ok(c.veri); else hataYap(c.hata); })
+    .catch(e=>hataYap('Bağlantı kurulamadı ('+(e&&e.message||e)+')'));
+}
+
+/* ===================== YÜKLEME ===================== */
+function yukle(sonra){
+  cagir('veriGetir',[],v=>{ S.veri=v; if(sonra) sonra(); else ciz(); }, m=>{ $('ana').innerHTML='<div class="bos">Veri alınamadı: '+esc(m)+'</div>'; });
+}
+window.addEventListener('load',()=>{ yukle(()=>{ if(S.oturum){ S.gorunum='veri'; nabizBasla(); } ciz(); }); });
+window.addEventListener('beforeunload',e=>{ if(S.degisti){ e.preventDefault(); e.returnValue=''; } });
+
+function ciz(){
+  const g=$('girisBtn');
+  if(S.oturum){
+    g.textContent = S.oturum.isim+' ▾'; g.onclick=menuAc;
+    $('altbaslik').textContent = S.gorunum==='veri' ? 'Veri girişi' : (S.gorunum==='yonetim'?'Yönetim':'Gözlemci ekranı');
+  } else { g.textContent='Giriş'; g.onclick=girisAc; $('altbaslik').textContent='Gözlemci ekranı'; }
+  $('kaydetbar').style.display = (S.gorunum==='veri' && S.il) ? 'flex' : 'none';
+  if(S.gorunum==='giris') return girisCiz();
+  if(S.gorunum==='veri') return veriCiz();
+  if(S.gorunum==='yonetim') return yonetimCiz();
+  gozlemciCiz();
+}
+
+/* ===================== GÖZLEMCİ ===================== */
+function ozetDeger(ad){ const r=(S.veri.ozet||[]).find(x=>String(x[0]).trim()===ad); return r?r[1]:''; }
+/* Tek durum: genel durum "Aktarım bekleniyor" ise yerine aktarımın hangi adımda olduğu yazılır */
+const DURUMLAR=[['Talep bekleniyor','d1'],['Kontrol gerekli','d2'],['Yönetime iletilmeli','d3'],['Yönetimden aktarım bekleniyor','d4'],['Hazine sürecinde – Genel Müdürlükten çıktı','d4'],['Nakit gönderildi – kapanış bekleniyor (EK-2)','d4'],['Kalan tutar işlemi bekleniyor','d5'],['Tamamlandı','d6']];
+function birDurum(i){
+  const d=i.durum||'';
+  if(dk(d)==='3'){ const a=dk(i.aktDurum); return a==='3' ? 'Hazine sürecinde – Genel Müdürlükten çıktı' : (a==='2' ? 'Yönetimden aktarım bekleniyor' : 'Yönetime iletilmeli'); }
+  return d.slice(4)||'—';
+}
+function durumRozet(i){ const t=birDurum(i), r=DURUMLAR.find(x=>x[0]===t); return '<span class="rozet '+(r?r[1]:'d1')+'">'+esc(t)+'</span>'; }
+function gozlemciCiz(){
+  const v=S.veri, iller=v.iller.filter(i=>i.proje>0||i.talep>0);
+  const top=k=>iller.reduce((s,i)=>s+(Number(i[k])||0),0);
+  const sayac={}; iller.forEach(i=>{ const d=birDurum(i); sayac[d]=(sayac[d]||0)+1; });
+  let h='<div class="kartlar">'+
+    kpi('Onaylı proje', iller.reduce((s,i)=>s+i.proje,0)+' proje · '+iller.length+' il')+
+    kpi('Talep toplamı', tl0(top('talep')), iller.filter(i=>i.talep>0).length+' il')+
+    kpi('Aktarılan', tl0(top('aktarilan')), iller.filter(i=>dk(i.aktDurum)==='4').length+' il')+
+    kpi('Harcanan', tl0(top('harcanan')))+
+    kpi('İllerin elindeki kalan tutar', tl0(top('elindeki')),'', true)+
+  '</div>';
+  h+='<div class="cipler"><button class="cip'+(S.filtre===''?' secili':'')+'" onclick="filtre(\'\')">Tümü ('+iller.length+')</button>'+
+    DURUMLAR.map(d=>'<button class="cip'+(S.filtre===d[0]?' secili':'')+'" onclick="filtre(\''+d[0]+'\')">'+esc(d[0])+' ('+(sayac[d[0]]||0)+')</button>').join('')+'</div>';
+  h+='<input class="ara" placeholder="İl ara…" value="'+esc(S.ara)+'" oninput="S.ara=this.value;listeCiz()">';
+  h+='<div class="liste" id="liste"></div><p class="kucuk" style="margin-top:14px">Son güncelleme: '+new Date(v.zaman).toLocaleString('tr-TR')+' · Projesi olmayan iller listelenmez.</p>';
+  $('ana').innerHTML=h; listeCiz();
+}
+function kpi(a,b,c,v){ return '<div class="kpi'+(v?' vurgu':'')+'"><span>'+esc(a)+'</span><b class="para">'+esc(b)+'</b>'+(c?'<span>'+esc(c)+'</span>':'')+'</div>'; }
+function filtre(d){ S.filtre=d; gozlemciCiz(); }
+function listeCiz(){
+  const q=S.ara.trim().toLocaleUpperCase('tr-TR');
+  const l=S.veri.iller.filter(i=>(i.proje>0||i.talep>0)&&(!S.filtre||birDurum(i)===S.filtre)&&(!q||i.il.indexOf(q)>=0));
+  $('liste').innerHTML = l.length? l.map(i=>
+    '<div class="ilkart" onclick="ilDetay(\''+esc(i.il)+'\')"><div class="ad">'+esc(i.il)+' <span class="kucuk">· '+i.proje+' proje</span></div>'+
+    '<div>'+durumRozet(i)+'</div>'+
+    '<div class="alt"><span>Talep <b class="para">'+tl0(i.talep)+'</b></span>'+
+    '<span>Aktarılan <b class="para">'+tl0(i.aktarilan)+'</b></span>'+
+    '<span>Elindeki <b class="para">'+tl0(i.elindeki)+'</b></span></div></div>').join('') : '<div class="bos">Kayıt yok.</div>';
+}
+function ilDetay(ad){
+  const i=S.veri.iller.find(x=>x.il===ad), ps=S.veri.projeler.filter(p=>p.il===ad);
+  let h='<div class="ust"><h2>'+esc(ad)+'</h2>'+durumRozet(i)+'<button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">';
+  h+='<div class="satirlar">'+
+    sat('Resmi yazı',(i.resmi||'—')+(i.rTarih?' · '+trTarih(i.rTarih):'')+(i.rSayi?' · '+esc(i.rSayi):''))+sat('Kontrol',i.kontrol||'—')+
+    sat('Talep',tl(i.talep))+sat('Üst sınır',tl(i.ust))+
+    sat('Yönetime yazı',i.yonetime==='Evet'?('Evet'+(i.yTarih?' · '+trTarih(i.yTarih):'')+(i.ySayi?' · '+i.ySayi:'')):(i.yonetime||'—'))+
+    sat('Aktarım',i.aktDurum?i.aktDurum.slice(4)+(i.aTarih?' · '+trTarih(i.aTarih)+(i.aSayi?' · '+i.aSayi:''):''):'—')+
+    (i.hTarih||i.hNo?sat('Ödeme emri',(i.hTarih?trTarih(i.hTarih):'')+(i.hNo?' · No '+esc(i.hNo):'')):'')+
+    (i.nTarih?sat('Nakit karşılandı',trTarih(i.nTarih)):'')+
+    sat('Aktarılan',tl(i.aktarilan))+sat('Kapanış formu (EK-2)',i.ek2||'—')+sat('Harcanan',tl(i.harcanan))+
+    sat('İlin elindeki kalan tutar','<b>'+tl(i.elindeki)+'</b>',true)+
+    sat('Kalan tutar ne olacak?',i.kDurum?esc(i.kDurum)+(i.kAciklama?' · '+esc(i.kAciklama):''):'—')+(i.not?sat('Not',i.not):'')+'</div>';
+  h+='<table class="t"><thead><tr><th>S.N.</th><th>Proje</th><th style="text-align:right">Talep</th><th>Kapanış (EK-2)</th><th style="text-align:right">Kalan</th></tr></thead><tbody>'+
+    ps.map(p=>'<tr><td>'+p.sn+'</td><td>'+esc(p.ad)+'<div class="kucuk">'+esc(p.tur)+(p.uni?' · '+esc(p.uni):'')+'</div>'+
+      ((p.uyari1||p.uyari2)?'<div class="uy">'+esc([p.uyari1,p.uyari2].filter(Boolean).join(' · '))+'</div>':'')+'</td>'+
+      '<td class="s">'+tl(p.top)+'<div class="kucuk">'+yz(p.yuzde)+'</div></td><td>'+esc(p.durum||'—')+(p.harcanan!==''?'<div class="kucuk">Harcanan '+tl(p.harcanan)+'</div>':'')+'</td><td class="s">'+tl(p.kalan)+'</td></tr>').join('')+
+    '</tbody></table></div>';
+  $('panel').innerHTML=h; panelAc();
+}
+function sat(a,b,ham){ return '<span>'+esc(a)+'</span><div>'+(ham?b:esc(b))+'</div>'; }
+function panelKapat(){ $('ort').classList.remove('acik'); }
+
+/* ===================== GİRİŞ ===================== */
+function girisAc(){ S.gorunum='giris'; ciz(); }
+function girisCiz(){
+  $('ana').innerHTML='<div class="form"><h2>Veri girişi</h2><p>Yalnız veri girişi yapan personel içindir. Verileri görmek için giriş gerekmez.</p>'+
+    '<div class="alan"><label>Kullanıcı adı</label><input class="g" id="gk" autocomplete="username" autocapitalize="none"></div>'+
+    '<div class="alan"><label>Şifre</label><input class="g" id="gs" type="password" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')girisYap()"></div>'+
+    '<div class="hata" id="gh"></div><button class="btn ana" style="width:100%;margin-top:6px" onclick="girisYap()">Giriş yap</button>'+
+    '<div class="ayrac">— yönetici —</div><button class="btn ikincil" style="width:100%" onclick="googleGiris()">Google hesabıyla giriş</button>'+
+    '<p style="margin-top:14px;text-align:center"><a href="#" onclick="S.gorunum=\'gozlemci\';ciz();return false">← Gözlemci ekranına dön</a></p></div>';
+  setTimeout(()=>$('gk')&&$('gk').focus(),50);
+}
+function girisYap(){
+  const k=$('gk').value, s=$('gs').value; $('gh').textContent='';
+  if(!k||!s){ $('gh').textContent='Kullanıcı adı ve şifre giriniz.'; return; }
+  yuk(true,'Giriş yapılıyor…');
+  cagir('giris',[k,s],r=>{ yuk(false); if(!r.ok){ $('gh').textContent=r.mesaj; return; } oturumKur(r); if(r.ilkSifre) setTimeout(()=>{ toast('İlk şifrenizi değiştirmeniz önerilir (sağ üst menü).',6000); },400); });
+}
+function googleGiris(){
+  yuk(true,'Giriş yapılıyor…');
+  cagir('googleGiris',[],r=>{ yuk(false); if(!r.ok){ $('gh').textContent=r.mesaj; return; } oturumKur(r); });
+}
+function oturumKur(r){
+  S.oturum={token:r.token,isim:r.isim,rol:r.rol,ad:r.ad};
+  try{ sessionStorage.setItem('unides_oturum',JSON.stringify(S.oturum)); }catch(e){}
+  S.gorunum='veri'; nabizBasla(); ciz();
+}
+function oturumBitir(){
+  S.oturum=null; S.il=''; S.taslak=null; S.degisti=false; clearInterval(S.nabizT);
+  try{ sessionStorage.removeItem('unides_oturum'); }catch(e){}
+  S.gorunum='gozlemci'; ciz();
+}
+function menuAc(){
+  const y=S.oturum.rol==='YONETICI';
+  $('panel').innerHTML='<div class="ust"><h2>'+esc(S.oturum.isim)+'</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic" style="display:grid;gap:8px">'+
+    '<button class="btn ikincil" onclick="git(\'veri\')">Veri girişi</button>'+
+    '<button class="btn ikincil" onclick="git(\'gozlemci\')">Gözlemci ekranı</button>'+
+    '<button class="btn ikincil" onclick="odenekAc()">Ödenek aktarma tablosu (Excel)</button>'+
+    (y?'<button class="btn ikincil" onclick="git(\'yonetim\')">Yönetim (kullanıcılar, geçmiş)</button>':'')+
+    (S.veri&&S.veri.excelUrl?'<a class="btn ikincil" style="text-align:center;text-decoration:none" href="'+esc(S.veri.excelUrl)+'" target="_blank">Excel dosyasını aç</a>':'')+
+    (S.oturum.ad!=='yonetici'?'<button class="btn ikincil" onclick="sifreAc()">Şifre değiştir</button>':'')+
+    '<button class="btn ikincil" onclick="cikisYap()">Çıkış</button></div>';
+  panelAc();
+}
+function git(g){ if(S.degisti&&g!=='veri'&&!confirm('Kaydedilmemiş değişiklikler var. Çıkılsın mı?')) return; if(g!=='veri'){ S.degisti=false; } panelKapat(); S.gorunum=g; ciz(); }
+function cikisYap(){ if(S.degisti&&!confirm('Kaydedilmemiş değişiklikler var. Çıkılsın mı?')) return; panelKapat(); cagir('cikis',[S.oturum.token],()=>{}); oturumBitir(); }
+function sifreAc(){
+  $('panel').innerHTML='<div class="ust"><h2>Şifre değiştir</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
+    '<div class="alan"><label>Mevcut şifre</label><input class="g" type="password" id="s1"></div>'+
+    '<div class="alan"><label>Yeni şifre (en az 6 karakter)</label><input class="g" type="password" id="s2"></div>'+
+    '<div class="alan"><label>Yeni şifre (tekrar)</label><input class="g" type="password" id="s3"></div>'+
+    '<div class="hata" id="sh"></div><button class="btn ana" onclick="sifreKaydet()">Değiştir</button></div>';
+}
+function sifreKaydet(){
+  if($('s2').value!==$('s3').value){ $('sh').textContent='Yeni şifreler aynı değil.'; return; }
+  cagir('sifreDegistir',[S.oturum.token,$('s1').value,$('s2').value],r=>{ if(!r.ok){ $('sh').textContent=r.mesaj; return; } panelKapat(); toast('Şifre değiştirildi.'); });
+}
+
+/* ===================== AKTİF KULLANICI ===================== */
+function nabizBasla(){ clearInterval(S.nabizT); nabiz(); S.nabizT=setInterval(nabiz,60000); }
+function nabiz(){
+  if(!S.oturum) return;
+  cagir('nabiz',[S.oturum.token,S.il],l=>{ S.digerleri=l||[]; const u=$('aktifuyari'); if(u) u.outerHTML=aktifHtml(); },()=>{});
+}
+function aktifHtml(){
+  const l=(S.digerleri||[]);
+  if(!l.length) return '<div id="aktifuyari"></div>';
+  const ayni=l.filter(x=>x.il&&x.il===S.il);
+  return '<div id="aktifuyari" class="uyarit">⚠ Şu an veri girişinde: '+l.map(x=>'<b>'+esc(x.isim)+'</b>'+(x.il?' ('+esc(x.il)+')':'')).join(', ')+
+    (ayni.length?'<br><b>Aynı ili düzenliyorsunuz.</b> Birinizin kaydı diğerinin üzerine yazabilir; kaydetmeden önce haberleşin.':'')+'</div>';
+}
+
+/* ===================== VERİ GİRİŞİ ===================== */
+function veriCiz(){
+  const iller=S.veri.iller.filter(i=>i.proje>0);
+  let h=aktifHtml()+'<div class="ilsec"><select id="ilsec" onchange="ilSec(this.value)"><option value="">— İl seçin —</option>'+
+    iller.map(i=>'<option'+(i.il===S.il?' selected':'')+' value="'+esc(i.il)+'">'+esc(i.il)+' · '+esc(birDurum(i))+'</option>').join('')+'</select></div>';
+  if(!S.il){ $('ana').innerHTML=h+'<div class="bos">Veri girmek için il seçin.</div>'; return; }
+  const t=S.taslak, i=t.il, o=S.veri.iller.find(x=>x.il===S.il);
+  h+='<div class="kucuk" style="margin:-2px 0 10px">Durum: '+durumRozet(o)+' · İlin elindeki kalan: <b class="para">'+tl(o.elindeki)+'</b></div>';
+
+  // 1 · TALEP
+  h+='<details class="bolum" '+(t.ac1?'open':'')+' ontoggle="S.taslak.ac1=this.open"><summary>1 · Nakit talebi (EK-1)<span class="sag kucuk" id="ozet1"></span></summary><div class="gov">'+
+    seg('Resmi yazı geldi mi?','resmi',['Geldi','Gelmedi'],i.resmi)+
+    '<div class="iki"><div class="alan"><label>Resmi yazı tarihi <span class="kucuk">(isteğe bağlı)</span></label><input class="g" type="date" value="'+esc(i.rTarih)+'" oninput="ilAl(\'rTarih\',this.value)"></div>'+
+    '<div class="alan"><label>Resmi yazı sayısı <span class="kucuk">(isteğe bağlı)</span></label><input class="g" value="'+esc(i.rSayi)+'" oninput="ilAl(\'rSayi\',this.value)"></div></div>'+
+    seg('Kontrol (üst yazıda sorun varsa seçin)','kontrol',['Uygun','Eksik var','Tutar farklı','Tertip hatalı'],i.kontrol,true)+
+    '<div class="alan"><label>Projeler — EK-1 formundaki tutarlar (TL, KDV dâhil). Projeye dokunarak açın.</label>'+
+    t.projeler.map((p,ix)=>projeEk1(p,ix)).join('')+'</div></div></details>';
+
+  // UZUN BÜTÇE TERTİPLERİ (ayrı başlık)
+  h+='<details class="bolum" '+(t.acT?'open':'')+' ontoggle="S.taslak.acT=this.open"><summary>Uzun bütçe tertipleri<span class="sag kucuk" id="ozetT"></span></summary><div class="gov">'+
+    '<p class="kucuk" style="margin:10px 0 0">İlin üst yazısındaki tertip aynen yazılır. Yalnız talep edilen kodlar görünür.</p>'+
+    KOD.map((k,j)=>'<div class="alan" id="ter'+j+'" style="display:none"><label>'+(j<4?k+' · '+KODAD[j]:'DİĞER')+'</label>'+
+      (j===4?'<input class="g" placeholder="Ekonomik kod (ör. 03.07)" style="margin-bottom:6px" value="'+esc(i.digerKod)+'" oninput="ilAl(\'digerKod\',this.value)">':'')+
+      '<input class="g" placeholder="ör. 33.256.794.16825.9900.58.02.'+(j<4?k:'03.07')+'" value="'+esc(i['t'+(j+1)])+'" oninput="ilAl(\'t'+(j+1)+'\',this.value)"></div>').join('')+
+    '<div class="uy" id="teruy"></div></div></details>';
+
+  // 2 · AKTARIM (iki parça)
+  h+='<details class="bolum" '+(t.ac2?'open':'')+' ontoggle="S.taslak.ac2=this.open"><summary>2 · Aktarım<span class="sag" id="ozet2"></span></summary><div class="gov">'+
+    '<div class="altkutu"><div class="altbaslik">2a · Yönetime yazı</div>'+
+    seg('Yönetime yazıldı mı?','yonetime',['Evet','Hayır'],i.yonetime)+
+    '<div class="iki"><div class="alan"><label>Yönetime yazı tarihi</label><input class="g" type="date" value="'+esc(i.yTarih)+'" oninput="ilAl(\'yTarih\',this.value)"></div>'+
+    '<div class="alan"><label>Yönetime yazı sayısı</label><input class="g" value="'+esc(i.ySayi)+'" oninput="ilAl(\'ySayi\',this.value)"></div></div></div>'+
+    '<div class="altkutu yesilkutu"><div class="altbaslik">2b · Yönetimin illere aktarım yazısı</div>'+
+    '<div class="iki"><div class="alan"><label>Yönetimin illere aktarım yazısı tarihi</label><input class="g" type="date" value="'+esc(i.aTarih)+'" oninput="ilAl(\'aTarih\',this.value)"></div>'+
+    '<div class="alan"><label>Yönetimin illere aktarım yazısı sayısı</label><input class="g" value="'+esc(i.aSayi)+'" oninput="ilAl(\'aSayi\',this.value)"></div></div></div>'+
+    '<div class="altkutu mavikutu"><div class="altbaslik">2c · Ödeme emri (Hazine)</div><div class="kucuk" style="margin:-2px 0 8px">Ödeme emri belgesindeki tarih ve numara girilir. Nakit karşılanma tarihi girilince durum “Nakit aktarıldı” olur.</div>'+
+    '<div class="iki"><div class="alan"><label>Ödeme emri tarihi</label><input class="g" type="date" value="'+esc(i.hTarih)+'" oninput="ilAl(\'hTarih\',this.value)"></div>'+
+    '<div class="alan"><label>Ödeme emri no</label><input class="g" value="'+esc(i.hNo)+'" oninput="ilAl(\'hNo\',this.value)"></div></div>'+
+    '<div class="alan"><label>Nakit karşılanma tarihi <span class="kucuk">(işlem geçmişinden)</span></label><input class="g" type="date" value="'+esc(i.nTarih)+'" oninput="ilAl(\'nTarih\',this.value)"></div></div>'+
+    '<div class="hesap" id="hesap2"></div></div></details>';
+
+  // 3 · KAPANIŞ
+  h+='<details class="bolum" '+(t.ac3?'open':'')+' ontoggle="S.taslak.ac3=this.open"><summary><span>3 · Kapanış (EK-2)<small class="kucuk" style="display:block;font-weight:400">Tüm projeler tamamlandıktan sonra gelen kapanış formu (EK-2) ile doldurulacak</small></span><span class="sag kucuk" id="ozet3"></span></summary><div class="gov">'+
+    seg('Kapanış formu (EK-2) geldi mi?','ek2',['Geldi','Gelmedi'],i.ek2)+
+    '<div class="alan"><label>Projeler — kapanış durumu ve harcanan</label>'+t.projeler.map((p,ix)=>projeEk2(p,ix)).join('')+'</div>'+
+    '<div class="hesap" id="hesap3"></div></div></details>';
+
+  // 4 · TOPLAM KALAN TUTAR
+  h+='<details class="bolum" '+(t.ac4?'open':'')+' ontoggle="S.taslak.ac4=this.open"><summary>4 · Kalan tutar<span class="sag kucuk" id="ozet4"></span></summary><div class="gov">'+
+    '<div class="hesap" id="hesap4" style="margin-top:0"></div>'+
+    seg('Kalan tutar ne olacak?','kDurum',['Sonraki dönemde düşülecek','Başka projede kullanılacak','İade edildi'],i.kDurum)+
+    '<div class="alan"><label>Açıklama (yazı tarihi/sayısı, hangi proje vb.)</label><textarea class="g" rows="2" oninput="ilAl(\'kAciklama\',this.value)">'+esc(i.kAciklama)+'</textarea></div>'+
+    '<div class="kucuk">Seçim yapılınca ilin durumu “Tamamlandı” olur. Elinde kalan yoksa seçim gerekmez.</div></div></details>';
+
+  // NOT
+  h+='<details class="bolum" '+(t.acN||i.not?'open':'')+' ontoggle="S.taslak.acN=this.open"><summary>Not</summary><div class="gov"><div class="alan"><textarea class="g" rows="2" oninput="ilAl(\'not\',this.value)">'+esc(i.not)+'</textarea></div></div></details>';
+
+  $('ana').innerHTML=h; hesapla();
+}
+function seg(etiket,alan,ops,deger,kontrol){
+  return '<div class="alan"><label>'+esc(etiket)+'</label><div class="seg" data-alan="'+alan+'">'+
+    ops.map(o=>'<button type="button" class="'+(o===deger?'on':'')+(kontrol&&o!=='Uygun'?' kirmizi':'')+'" onclick="segSec(this,\''+alan+'\',\''+o+'\')">'+esc(o)+'</button>').join('')+
+    '</div></div>';
+}
+function segSec(b,alan,o){
+  const yeni = S.taslak.il[alan]===o ? '' : o;  // aynı seçeneğe tekrar dokununca temizlenir
+  S.taslak.il[alan]=yeni;
+  b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.textContent===yeni));
+  isaretle();
+}
+function ilAl(k,v,sayi){ S.taslak.il[k]= sayi? sayiOku(v): v; isaretle(); }
+function projeEk1(p,ix){
+  return '<details class="proje"><summary><span class="no">'+p.sn+'</span><span class="pad">'+esc(p.ad)+'<small>'+esc(p.tur)+' · üst sınır '+tl0(p.ust)+'</small></span><span class="para kucuk" id="pt'+ix+'"></span></summary><div class="gov">'+
+    '<div class="kodlar">'+KOD.map((k,j)=>'<div><label>'+k+'<br>'+KODAD[j]+'</label><input class="g" inputmode="decimal" value="'+esc(sayiYaz(p.k[j]))+'" oninput="sayiGir(this);projeAl('+ix+',\'k\','+j+',this.value)"></div>').join('')+'</div>'+
+    '<div class="hesap" id="ph'+ix+'"></div><div class="uy" id="pu'+ix+'"></div>'+
+    '<div class="alan"><label>Açıklama (talep yoksa zorunlu)</label><input class="g" value="'+esc(p.aciklama)+'" oninput="projeAl('+ix+',\'aciklama\',0,this.value)"></div></div></details>';
+}
+function projeEk2(p,ix){
+  return '<details class="proje"><summary><span class="no">'+p.sn+'</span><span class="pad">'+esc(p.ad)+'<small id="p2a'+ix+'"></small></span><span class="para kucuk" id="p2k'+ix+'"></span></summary><div class="gov">'+
+    '<div class="alan"><label>Kapanış durumu</label><div class="seg">'+['Gerçekleştirildi','İptal edildi'].map(o=>'<button type="button" class="'+(p.durum===o?'on':'')+'" onclick="durumSec(this,'+ix+',\''+o+'\')">'+o+'</button>').join('')+'</div></div>'+
+    '<div class="alan"><label>Harcanan (TL)</label><input class="g" inputmode="decimal" value="'+esc(sayiYaz(p.harcanan))+'" oninput="sayiGir(this);projeAl('+ix+',\'harcanan\',0,this.value)"></div>'+
+    '<div class="uy" id="p2u'+ix+'"></div>'+
+    '<div class="alan"><label>Açıklama</label><input class="g" value="'+esc(p.aciklama2)+'" oninput="projeAl('+ix+',\'aciklama2\',0,this.value)"></div></div></details>';
+}
+function durumSec(b,ix,o){
+  const p=S.taslak.projeler[ix]; p.durum = p.durum===o ? '' : o;
+  b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.textContent===p.durum));
+  isaretle();
+}
+function projeAl(ix,alan,j,v){
+  const p=S.taslak.projeler[ix];
+  if(alan==='k') p.k[j]=sayiOku(v); else if(alan==='harcanan') p.harcanan=sayiOku(v); else p[alan]=v;
+  isaretle();
+}
+function isaretle(){ S.degisti=true; hesapla(); }
+
+/* Excel formüllerinin aynısı — anında geri bildirim için (asıl hesap tabloda yapılır) */
+function hesapla(){
+  const t=S.taslak; if(!t) return;
+  const ps=t.projeler, i=t.il;
+  let talep=0, hatali=false, kod=[0,0,0,0,0], harc=0, kalan=0, kap=0, talepli=0;
+  const top=p=>{ const v=p.k.filter(x=>x!==''&&!isNaN(x)); return v.length? v.reduce((s,x)=>s+x,0) : ''; };
+  const ilTalepVar = ps.some(p=>top(p)!=='' && top(p)>0);
+  ps.forEach((p,ix)=>{
+    const tp=top(p); if(p.k.some(x=>Number.isNaN(x))) hatali=true;
+    p.k.forEach((x,j)=>{ if(x!==''&&!isNaN(x)) kod[j]+=x; });
+    if(tp!=='') { talep+=tp; if(tp>0) talepli++; }
+    const u1 = tp==='' ? (ilTalepVar&&!p.aciklama?'Talep yok: açıklama yazın':'') : (tp>p.ust?'Üst sınır aşıldı':'');
+    const e=$('pt'+ix); if(e) e.textContent = tp===''?'':tl0(tp);
+    const hh=$('ph'+ix); if(hh) hh.innerHTML = tp===''?'':'Toplam <b>'+tl(tp)+'</b> · üst sınırın <b>'+yz(tp/p.ust)+'</b>';
+    const uu=$('pu'+ix); if(uu) uu.textContent = (p.k.some(x=>Number.isNaN(x))?'Tutar anlaşılamadı (yalnız rakam). ':'')+u1;
+    // EK-2
+    const h=p.harcanan; if(Number.isNaN(h)) hatali=true;
+    const hn=(h===''||isNaN(h))?0:h, tn=tp===''?0:tp;
+    let kl=''; if(p.durum){ kl = p.durum==='İptal edildi'? tn : tn-hn; kalan+=kl; kap++; }
+    harc+=hn;
+    let u2=''; if(!p.durum){ if(hn>0) u2='Durum seçilmedi'; }
+    else if(p.durum==='İptal edildi'&&hn>0) u2='İptalde harcama olmaz';
+    else if(h==='') { if(p.durum==='Gerçekleştirildi') u2='Harcanan yazılmadı'; }
+    else if(hn>tn) u2='Harcanan talepten fazla';
+    const a=$('p2a'+ix); if(a) a.textContent='Talep '+(tp===''?'yok':tl0(tp))+(p.durum?' · '+p.durum:'');
+    const k=$('p2k'+ix); if(k) k.textContent = p.durum? 'Kalan '+tl0(kl):'';
+    const u=$('p2u'+ix); if(u) u.textContent=(Number.isNaN(h)?'Tutar anlaşılamadı (yalnız rakam). ':'')+u2;
+  });
+  const aktarildi = !!i.nTarih;
+  const aktarilan = aktarildi? talep : 0;
+  const akt = aktarildi?'4 · Nakit aktarıldı': i.aTarih?'3 · Hazine sürecinde – Genel Müdürlükten çıktı': (i.yonetime==='Evet'?'2 · Yönetimden aktarım bekleniyor':(i.resmi==='Geldi'?'1 · Yönetime iletilmeli':''));
+  const elindeki = aktarilan-harc;
+  const eksik=[]; kod.forEach((x,j)=>{ const d=$('ter'+j); if(d) d.style.display = x>0?'block':'none'; if(x>0 && !String(i['t'+(j+1)]||'').trim()) eksik.push(j<4?KOD[j]:'DİĞER'); });
+  if(kod[4]>0 && !String(i.digerKod||'').trim()) eksik.push('DİĞER kodu');
+  const tu=$('teruy'); if(tu) tu.textContent = eksik.length? 'Tertip eksik: '+eksik.join(', ') : '';
+  const o1=$('ozet1'); if(o1) o1.textContent='Talep '+tl0(talep);
+  const o2=$('ozet2'); if(o2) o2.innerHTML= akt?'<span class="rozet a'+dk(akt)+'">'+esc(akt.slice(4))+'</span>':'';
+  const o3=$('ozet3'); if(o3) o3.textContent=kap+'/'+talepli+' proje kapandı';
+  const h2=$('hesap2'); if(h2) h2.innerHTML='Aktarılan: <b class="para">'+tl(aktarilan)+'</b>'+(i.yonetime==='Evet'&&(!i.yTarih||!i.ySayi)?' · <span class="uy">Yönetime yazının tarih/sayısı eksik</span>':'')+
+      ((i.aTarih&&!i.aSayi)?' · <span class="uy">Aktarım yazısının sayısı eksik</span>':'')+
+      ((!!i.hTarih!==!!String(i.hNo||'').trim())?' · <span class="uy">Ödeme emri tarihi ve numarası birlikte girilmeli</span>':'')+
+      ((i.hTarih&&!i.aTarih)?' · <span class="uy">Önce 2b aktarım yazısını girin</span>':'')+
+      ((i.nTarih&&!(i.hTarih&&String(i.hNo||'').trim()))?' · <span class="uy">Ödeme emri tarihi ve numarası da girilmeli</span>':'');
+  const h3=$('hesap3'); if(h3) h3.innerHTML='Harcanan <b class="para">'+tl(harc)+'</b> · Kalan (kapanan projeler) <b class="para">'+tl(kalan)+'</b>';
+  const h4=$('hesap4'); if(h4) h4.innerHTML='İlin elindeki kalan tutar <b class="para">'+tl(elindeki)+'</b><div class="kucuk">Aktarılan − harcanan (iptal edilen projenin parası ilde kalır)</div>';
+  const o4=$('ozet4'); if(o4) o4.textContent= i.kDurum? i.kDurum : (elindeki>0.005? tl0(elindeki) : '');
+  const oT=$('ozetT'); if(oT) oT.textContent= eksik.length? 'eksik: '+eksik.join(', ') : (kod.some(x=>x>0)?'tamam':'');
+  t.hatali=hatali;
+  $('kaydetyazi').textContent = hatali? 'Hatalı tutar var, düzeltin.' : (S.degisti? 'Kaydedilmemiş değişiklik var.' : 'Değişiklik yok.');
+  $('kaydetBtn').disabled = hatali || !S.degisti;
+}
+function ilSec(ad){
+  if(S.degisti && !confirm('Kaydedilmemiş değişiklikler var. Başka ile geçilsin mi?')){ $('ilsec').value=S.il; return; }
+  S.il=ad; S.degisti=false; S.taslak= ad? taslakKur(ad) : null; nabiz(); ciz(); window.scrollTo(0,0);
+}
+function taslakKur(ad){
+  const o=S.veri.iller.find(x=>x.il===ad);
+  return { taban:S.veri.zaman, ac1:true, ac2:false, ac3:false,
+    il:{resmi:o.resmi,kontrol:o.kontrol,yonetime:o.yonetime,yTarih:o.yTarih,ySayi:String(o.ySayi||''),aTarih:o.aTarih,aSayi:String(o.aSayi||''),hTarih:o.hTarih||'',hNo:String(o.hNo||''),nTarih:o.nTarih||'',rTarih:o.rTarih||'',rSayi:String(o.rSayi||''),ek2:o.ek2,kDurum:o.kDurum,kAciklama:o.kAciklama,not:o.not,t1:o.t[0],t2:o.t[1],t3:o.t[2],t4:o.t[3],t5:o.t[4],digerKod:o.digerKod},
+    projeler:S.veri.projeler.filter(p=>p.il===ad).map(p=>({r:p.r,sn:p.sn,ad:p.ad,tur:p.tur,ust:p.ust,k:p.k.slice(),aciklama:p.aciklama,durum:p.durum,harcanan:p.harcanan,aciklama2:p.aciklama2})) };
+}
+function kaydet(zorla){
+  const t=S.taslak; if(!t||t.hatali) return;
+  const veri={ il:t.il, projeler:t.projeler.map(p=>({r:p.r,k:p.k,aciklama:p.aciklama,durum:p.durum,harcanan:p.harcanan,aciklama2:p.aciklama2})) };
+  yuk(true,'Kaydediliyor ve Excel güncelleniyor…');
+  cagir('kaydet',[S.oturum.token,S.il,veri,t.taban,!!zorla],r=>{
+    yuk(false);
+    if(!r.ok){
+      if(r.cakisma){ if(confirm(r.mesaj)) kaydet(true); return; }
+      toast(r.mesaj||'Kaydedilemedi.'); return;
+    }
+    const ac={ac1:t.ac1,acT:t.acT,ac2:t.ac2,ac3:t.ac3,ac4:t.ac4,acN:t.acN};
+    S.veri=r.veri; S.degisti=false; S.taslak=Object.assign(taslakKur(S.il),ac);
+    ciz();
+    if(r.degisiklikYok) toast('Değişiklik yoktu.');
+    else toast(r.excel&&r.excel.ok ? '✓ Kaydedildi. Excel güncellendi.' : '✓ Kaydedildi. Excel güncellenemedi: '+(r.excel&&r.excel.mesaj||''), 5000);
+  });
+}
+
+/* ===================== ÖDENEK AKTARMA TABLOSU ===================== */
+const SECIMLER=[['iletilecek','Yönetime iletilecekler','1'],['bekleyen','Yönetimden aktarım bekleyenler','2'],['hazine','Hazine sürecindekiler','3'],['aktarilan','Nakdi aktarılanlar','4'],['hepsi','Talebi gelen tüm iller',''],['secili','İl seçerek','']];
+S.od={secim:'iletilecek',haric:true,iller:[]};
+function odSuz(){
+  const s=S.od, l=S.veri.iller.filter(i=>i.talep>0);
+  return l.filter(i=>{
+    if(s.secim==='secili' && s.iller.indexOf(i.il)<0) return false;
+    if(['iletilecek','bekleyen','hazine','aktarilan'].indexOf(s.secim)>=0){ const k=SECIMLER.find(x=>x[0]===s.secim)[2]; if(String(i.aktDurum).charAt(0)!==k) return false; }
+    if(s.haric && String(i.durum).charAt(0)==='2') return false;
+    return true; });
+}
+function odenekAc(){
+  const s=S.od, l=odSuz(), tum=S.veri.iller.filter(i=>i.talep>0);
+  const kalem=l.reduce((n,i)=>n+i.kod.filter(x=>x>0).length,0), top=l.reduce((n,i)=>n+i.talep,0);
+  let h='<div class="ust"><h2>Ödenek aktarma tablosu</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
+    '<div class="alan" style="margin-top:0"><label>Tabloya girecek iller</label><div class="seg">'+
+    SECIMLER.map(x=>'<button type="button" class="'+(s.secim===x[0]?'on':'')+'" onclick="S.od.secim=\''+x[0]+'\';odenekAc()">'+esc(x[1])+'</button>').join('')+'</div></div>'+
+    '<div class="hesap" style="margin-top:10px"><label><input type="checkbox" '+(s.haric?'checked':'')+' onchange="S.od.haric=this.checked;odenekAc()"> "Kontrol gerekli" durumundaki illeri çıkar</label></div>';
+  if(s.secim==='secili') h+='<div class="bolum" style="padding:8px 12px;margin-top:10px;max-height:260px;overflow:auto">'+tum.map(i=>
+      '<label style="display:block;padding:4px 0"><input type="checkbox" '+(s.iller.indexOf(i.il)>=0?'checked':'')+' onchange="odIl(\''+esc(i.il)+'\',this.checked)"> '+esc(i.il)+' <span class="kucuk">· '+tl0(i.talep)+' · '+esc(String(i.aktDurum).slice(4)||'—')+'</span></label>').join('')+'</div>';
+  const eks=l.filter(i=>i.kod.some((x,j)=>x>0&&!String(i.t[j]||'').trim()));
+  h+='<div class="satirlar" style="margin-top:12px">'+sat('İl',l.length+' il')+sat('Satır (kalem)',kalem+'')+sat('Genel toplam','<b>'+tl(top)+'</b>',true)+'</div>'+
+    (eks.length?'<div class="uyarit">Tertibi eksik iller: '+eks.map(i=>esc(i.il)).join(', ')+'. Tabloda uzun tertip boş kalır.</div>':'')+
+    '<p class="kucuk">Sütunlar: S.N. · İl · Kısa bütçe kodu · Bütçe kod adı · Uzun bütçe tertibi · Tutar (KDV dâhil). Kopyası Drive\'da "_UYGULAMA / Ödenek Tabloları" klasörüne de kaydedilir.</p>'+
+    '<button class="btn ana" style="width:100%" '+(l.length?'':'disabled')+' onclick="odenekOlustur()">Excel oluştur ve indir</button><div id="odsonuc"></div></div>';
+  $('panel').innerHTML=h; panelAc();
+}
+function odIl(il,ac){ const a=S.od.iller, k=a.indexOf(il); if(ac&&k<0) a.push(il); if(!ac&&k>=0) a.splice(k,1); odenekAc(); }
+function odenekOlustur(){
+  yuk(true,'Excel hazırlanıyor…');
+  cagir('odenekTablosu',[S.oturum.token,S.od.secim,S.od.iller,S.od.haric],r=>{
+    yuk(false);
+    if(!r.ok){ toast(r.mesaj); return; }
+    try{
+      const b=atob(r.base64), u=new Uint8Array(b.length); for(let k=0;k<b.length;k++) u[k]=b.charCodeAt(k);
+      const url=URL.createObjectURL(new Blob([u],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+      const a=document.createElement('a'); a.href=url; a.download=r.ad; document.body.appendChild(a); a.click(); a.remove();
+      $('odsonuc').innerHTML='<p class="kucuk" style="margin-top:10px">✓ <b>'+esc(r.ad)+'</b> hazır: '+r.il+' il, '+r.satir+' kalem, '+tl(r.toplam)+'. İnmediyse <a href="'+url+'" download="'+esc(r.ad)+'">buraya dokunun</a>.</p>';
+    }catch(e){ $('odsonuc').innerHTML='<p class="kucuk">Dosya Drive\'a kaydedildi; indirme başlatılamadı.</p>'; }
+  });
+}
+
+/* ===================== YÖNETİM ===================== */
+function yonetimCiz(){
+  $('ana').innerHTML='<div class="sekmeler"><button class="'+(S.sekme==='k'?'on':'')+'" onclick="S.sekme=\'k\';yonetimCiz()">Kullanıcılar</button><button class="'+(S.sekme==='g'?'on':'')+'" onclick="S.sekme=\'g\';yonetimCiz()">İşlem geçmişi</button></div><div id="ys"><div class="bos">Yükleniyor…</div></div>';
+  if(S.sekme!=='g'){ S.sekme='k'; cagir('kullaniciListesi',[S.oturum.token],kullaniciCiz); }
+  else cagir('gecmisListesi',[S.oturum.token],l=>{
+    $('ys').innerHTML= l.length? '<table class="t"><thead><tr><th>Zaman</th><th>Kullanıcı</th><th>İl</th><th>İşlem</th><th>Ayrıntı</th></tr></thead><tbody>'+
+      l.map(r=>'<tr>'+r.map(x=>'<td>'+esc(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table>' : '<div class="bos">Kayıt yok.</div>';
+  });
+}
+function kullaniciCiz(l){
+  $('ys').innerHTML='<p class="kucuk">Boş satırları yeni kullanıcı için doldurup "Aktif" yapın. "Şifreyi 12345 yap" ilk şifreyi verir.</p>'+
+    l.map(u=>'<div class="bolum" style="padding:10px 14px"><div class="iki"><div class="alan" style="margin-top:0"><label>Kullanıcı adı</label><input class="g" id="ka'+u.satir+'" value="'+esc(u.ad)+'" autocapitalize="none"></div>'+
+      '<div class="alan" style="margin-top:0"><label>Ad soyad</label><input class="g" id="ki'+u.satir+'" value="'+esc(u.isim)+'"></div></div>'+
+      '<div class="hesap"><label><input type="checkbox" id="kc'+u.satir+'" '+(u.aktif?'checked':'')+'> Aktif</label>'+
+      '<label><input type="checkbox" id="ks'+u.satir+'"> Şifreyi 12345 yap</label><span>'+esc(u.rol)+(u.sifreVar?'':' · şifre yok')+(u.son?' · son giriş '+esc(u.son):'')+'</span></div>'+
+      '<button class="btn ikincil" style="margin-top:8px;padding:8px 14px" onclick="kullaniciKaydet('+u.satir+')">Kaydet</button></div>').join('');
+}
+function kullaniciKaydet(s){
+  cagir('kullaniciGuncelle',[S.oturum.token,{satir:s,ad:$('ka'+s).value,isim:$('ki'+s).value,aktif:$('kc'+s).checked,sifirla:$('ks'+s).checked}],r=>{
+    if(!r.ok){ toast(r.mesaj); return; } kullaniciCiz(r.liste); toast('Kullanıcı kaydedildi.');
+  });
+}
+</script>
+</body>
+</html>
