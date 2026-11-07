@@ -234,6 +234,7 @@ function cagir(fn,args,ok,hata){
     if(m.indexOf('OTURUM:')>=0){ oturumBitir(); toast('Oturum süresi doldu, yeniden giriş yapın.'); return; }
     (hata||(x=>toast('Hata: '+x)))(m);
   };
+  if(window.google&&google.script&&google.script.run){ google.script.run.withSuccessHandler(v=>{ ok&&ok(v); }).withFailureHandler(hataYap)[fn].apply(null,args||[]); return; }
   fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:args||[]})})
     .then(r=>r.json()).then(c=>{ if(c.ok) ok&&ok(c.veri); else hataYap(c.hata); })
     .catch(e=>hataYap('Bağlantı kurulamadı ('+(e&&e.message||e)+')'));
@@ -348,7 +349,7 @@ function girisCiz(){
     '<div class="alan"><label>Kullanıcı adı</label><input class="g" id="gk" autocomplete="username" autocapitalize="none"></div>'+
     '<div class="alan"><label>Şifre</label><input class="g" id="gs" type="password" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')girisYap()"></div>'+
     '<div class="hata" id="gh"></div><button class="btn ana" style="width:100%;margin-top:6px" onclick="girisYap()">Giriş yap</button>'+
-    '<div class="ayrac">— yönetici —</div><button class="btn ikincil" style="width:100%" onclick="googleGiris()">Google hesabıyla giriş</button>'+
+    ((window.google&&google.script&&google.script.run)?'<div class="ayrac">— yönetici —</div><button class="btn ikincil" style="width:100%" onclick="googleGiris()">Google hesabıyla giriş</button>':'<p class="kucuk" style="margin-top:12px;text-align:center">Yönetici: kullanıcı adı <b>ahmet</b> ile giriş. Google hesabıyla giriş yalnız script adresinde çalışır.</p>')+
     '<p style="margin-top:14px;text-align:center"><a href="#" onclick="S.gorunum=\'gozlemci\';ciz();return false">← Gözlemci ekranına dön</a></p></div>';
   setTimeout(()=>$('gk')&&$('gk').focus(),50);
 }
