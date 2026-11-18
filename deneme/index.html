@@ -1107,7 +1107,7 @@ function sayAnim(kok){
     metin.replace(/\d[\d.]*(?:,\d+)?/g,(m,ix)=>{ parca.push(metin.slice(son,ix)); const ond=(m.split(',')[1]||'').length; parca.push({h:parseFloat(m.replace(/\./g,'').replace(',','.')),ond}); son=ix+m.length; return m; });
     parca.push(metin.slice(son)); if(!parca.some(p=>typeof p==='object'&&p.h>0)) return;
     const t0=performance.now(), sure=750;
-    const adim=t=>{ const k=Math.min(1,(t-t0)/sure), e=1-Math.pow(1-k,3);
+    const adim=t=>{ const k=Math.max(0,Math.min(1,(t-t0)/sure)), e=1-Math.pow(1-k,3);
       el.textContent=parca.map(p=>typeof p==='string'?p:(p.h*e).toLocaleString('tr-TR',{minimumFractionDigits:p.ond,maximumFractionDigits:p.ond})).join('');
       if(k<1) requestAnimationFrame(adim); else el.textContent=metin; };
     requestAnimationFrame(adim);
