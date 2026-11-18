@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="author" content="AHMET KÜÇÜKYAĞCI">
-<meta name="unides-surum" content="2.2">
+<meta name="unides-surum" content="2.2.1">
 <!-- ÜNİDES Nakit Takip V2 – Tüm Dönemler · ekran (07.11.2026, aşama 1-3 önizleme) -->
 <meta name="theme-color" content="#6b2d5c">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,8 +37,9 @@ main{max-width:1100px;margin:0 auto;padding:14px 16px 110px}
 .cip{border:1px solid var(--cizgi);background:var(--kart);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer}
 .cip.secili{background:var(--lac);color:#fff;border-color:var(--lac)}
 .ara{width:100%;padding:10px 12px;border:1px solid var(--cizgi);border-radius:10px;background:#fff;margin-bottom:10px}
-.liste{display:grid;gap:8px}
-.ilkart{background:var(--kart);border:1px solid var(--cizgi);border-radius:12px;padding:10px 12px;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.liste{display:grid;gap:8px;grid-template-columns:minmax(0,1fr)}
+.ilkart{background:var(--kart);border:1px solid var(--cizgi);border-radius:12px;padding:10px 12px;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px}
+@media(max-width:560px){.ilkart .rozet{white-space:normal;text-align:right;max-width:42vw}.ilkart .ad{min-width:0;overflow-wrap:anywhere}}
 .ilkart:hover{border-color:var(--lac2)}
 .ilkart .ad{font-weight:600}
 .ilkart .alt{font-size:12.5px;color:var(--soluk);grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px}
@@ -208,6 +209,16 @@ a{color:var(--lac2)}
 .anim .ilkart{animation:kartgel .35s ease-out both}
 @keyframes kartgel{from{opacity:0;transform:translateY(8px)}}
 .anim .kpi{animation:kartgel .4s ease-out both}
+#onayk{position:fixed;inset:0;z-index:80;background:rgba(27,35,51,.45);display:none;align-items:center;justify-content:center;padding:16px}
+#onayk.acik{display:flex}
+#onayk .ok{background:#fff;border-radius:16px;width:100%;max-width:440px;box-shadow:0 12px 40px rgba(15,23,42,.35);overflow:hidden;animation:okGir .16s ease-out}
+@keyframes okGir{from{transform:translateY(10px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+#onayk .okb{padding:14px 18px;border-bottom:1px solid var(--cizgi);font-weight:700;font-size:16.5px;display:flex;gap:10px;align-items:center}
+#onayk .okb i{width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:var(--turuncu);color:var(--mercan);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800}
+#onayk .oki{padding:14px 18px;font-size:15px;line-height:1.5;white-space:pre-line}
+#onayk .oka{padding:0 18px 16px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+#onayk .oka .btn{background:var(--gri);color:var(--yazi)}#onayk .oka .btn.ana{background:var(--lac);color:#fff}
+@media (prefers-reduced-motion: reduce){#onayk .ok{animation:none}}
 #tik{position:fixed;left:50%;top:42%;z-index:90;transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;background:#fff;border-radius:20px;padding:18px 26px 14px;text-align:center;box-shadow:0 10px 40px rgba(60,20,50,.28)}
 #tik.acik{animation:tikgel 1.3s ease both}
 @keyframes tikgel{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}14%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-56%) scale(1)}}
@@ -241,6 +252,7 @@ a{color:var(--lac2)}
 </div>
 <div class="ort" id="ort" onclick="if(event.target===this)panelKapat()"><div class="panel" id="panel"></div></div>
 <div class="toast" id="toast"></div>
+<div id="onayk" role="dialog" aria-modal="true" aria-labelledby="okbaslik" onclick="if(event.target===this)onayKapat(false)"><div class="ok"><div class="okb"><i>!</i><span id="okbaslik"></span></div><div class="oki" id="okmetin"></div><div class="oka"><button class="btn" id="okhayir" onclick="onayKapat(false)">Vazgeç</button><button class="btn ana" id="okevet" onclick="onayKapat(true)">Evet</button></div></div></div>
 <div id="ipucu"></div><div class="tazelik" id="tazelik"></div>
 <div id="tik"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29"/><path d="M19 33l9 9 17-19"/></svg><span>Kaydedildi</span></div>
 <div class="yukleniyor" id="yuk"><span id="yukyazi">Kaydediliyor…</span></div>
@@ -336,8 +348,8 @@ function donemleriYukle(sonra,sessiz){
   cagir('donemler',[],r=>{ saklaYaz('donemler',r); donemUygula(r); sonra&&sonra(); },
     m=>{ if(!sessiz) $('ana').innerHTML='<div class="bos">Dönemler alınamadı: '+esc(m)+'</div>'; });
 }
-function donemSec(id){
-  if(S.degisti && !confirm('Kaydedilmemiş değişiklikler var. Başka döneme geçilsin mi?')){ $('donemsec').value=S.donem; return; }
+function donemSec(id,_ok){
+  if(S.degisti && !_ok){ $('donemsec').value=S.donem; onayKutusu('Kaydedilmemiş değişiklikler var. Başka döneme geçilsin mi?\n(Kaydedilmemiş değişiklikler kaybolur.)','Evet, geç',()=>{ $('donemsec').value=id; donemSec(id,true); },'Kaydedilmemiş değişiklik'); return; }
   S.donem=id; S.il=''; S.taslak=null; S.degisti=false; S.filtre=''; S.ara='';
   try{ localStorage.setItem('unides_donem',id); }catch(e){}
   if(S.gorunum==='giris'||S.gorunum==='yonetim'){ } else S.gorunum = S.oturum?'veri':'gozlemci';
@@ -441,6 +453,13 @@ function ilDetay(ad){
   $('panel').innerHTML=h; panelAc();
 }
 function sat(a,b,ham){ return '<span>'+esc(a)+'</span><div>'+(ham?b:esc(b))+'</div>'; }
+/* Sayfa içi onay kutusu (tarayıcının confirm penceresi yerine; hiçbir tarayıcı/ayar engelleyemez). evet: onay düğmesi metni. */
+function onayKutusu(metin,evet,sonra,baslik){
+  S._onay=sonra; $('okbaslik').textContent=baslik||'Emin misiniz?'; $('okmetin').textContent=metin; $('okevet').textContent=evet||'Evet';
+  $('onayk').classList.add('acik'); S._onayOnce=document.activeElement; setTimeout(()=>{ try{ $('okevet').focus(); }catch(e){} },30);
+}
+function onayKapat(evet){ if(!$('onayk').classList.contains('acik')) return; $('onayk').classList.remove('acik'); const f=S._onay; S._onay=null; try{ S._onayOnce&&S._onayOnce.focus&&S._onayOnce.focus(); }catch(e){} if(evet&&f) f(); }
+document.addEventListener('keydown',e=>{ if(!$('onayk')||!$('onayk').classList.contains('acik')) return; if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); onayKapat(false); } else if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); onayKapat(true); } },true);
 function panelKapat(){ $('ort').classList.remove('acik'); }
 
 /* ===================== GİRİŞ ===================== */
@@ -487,8 +506,8 @@ function menuAc(){
     '<button class="btn ikincil" onclick="cikisYap()">Çıkış</button></div>';
   panelAc();
 }
-function git(g){ if(S.degisti&&g!=='veri'&&!confirm('Kaydedilmemiş değişiklikler var. Çıkılsın mı?')) return; if(g!=='veri'){ S.degisti=false; } panelKapat(); S.gorunum=g; ciz(); }
-function cikisYap(){ if(S.degisti&&!confirm('Kaydedilmemiş değişiklikler var. Çıkılsın mı?')) return; panelKapat(); cagir('cikis',[S.oturum.token],()=>{}); oturumBitir(); }
+function git(g,_ok){ if(S.degisti&&g!=='veri'&&!_ok){ onayKutusu('Kaydedilmemiş değişiklikler var. Çıkılsın mı?\n(Kaydedilmemiş değişiklikler kaybolur.)','Evet, çık',()=>git(g,true),'Kaydedilmemiş değişiklik'); return; } if(g!=='veri'){ S.degisti=false; } panelKapat(); S.gorunum=g; ciz(); }
+function cikisYap(_ok){ if(S.degisti&&!_ok){ onayKutusu('Kaydedilmemiş değişiklikler var. Oturum kapatılsın mı?\n(Kaydedilmemiş değişiklikler kaybolur.)','Evet, çıkış yap',()=>cikisYap(true),'Kaydedilmemiş değişiklik'); return; } panelKapat(); cagir('cikis',[S.oturum.token],()=>{}); oturumBitir(); }
 function sifreAc(){
   $('panel').innerHTML='<div class="ust"><h2>Şifre değiştir</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
     '<div class="alan"><label>Mevcut şifre</label><input class="g" type="password" id="s1"></div>'+
@@ -663,8 +682,8 @@ function hesapla(){
   $('kaydetyazi').textContent = hatali? 'Hatalı tutar var, düzeltin.' : (S.degisti? 'Kaydedilmemiş değişiklik var.' : 'Değişiklik yok.');
   $('kaydetBtn').disabled = hatali || !S.degisti;
 }
-function ilSec(ad){
-  if(S.degisti && !confirm('Kaydedilmemiş değişiklikler var. Başka ile geçilsin mi?')){ $('ilsec').value=S.il; return; }
+function ilSec(ad,_ok){
+  if(S.degisti && !_ok){ $('ilsec').value=S.il; onayKutusu('Kaydedilmemiş değişiklikler var. Başka ile geçilsin mi?\n(Kaydedilmemiş değişiklikler kaybolur.)','Evet, geç',()=>{ $('ilsec').value=ad; ilSec(ad,true); },'Kaydedilmemiş değişiklik'); return; }
   S.il=ad; S.degisti=false; S.taslak= ad? taslakKur(ad) : null; nabiz(); ciz(); window.scrollTo(0,0);
 }
 function taslakKur(ad){
@@ -681,7 +700,7 @@ function kaydet(zorla){
   cagir('kaydet',[S.oturum.token,S.donem,S.il,veri,t.taban,!!zorla],r=>{
     yuk(false);
     if(!r.ok){
-      if(r.cakisma){ if(confirm(r.mesaj)) kaydet(true); return; }
+      if(r.cakisma){ onayKutusu(r.mesaj,'Evet, yine de kaydet',()=>kaydet(true),'Başka biri değiştirdi'); return; }
       toast(r.mesaj||'Kaydedilemedi.'); return;
     }
     const ac={ac1:t.ac1,acT:t.acT,ac2:t.ac2,ac3:t.ac3,ac4:t.ac4,acN:t.acN};
@@ -888,8 +907,8 @@ function kalanVeriCiz(){
 }
 function kSayiGir(el){ const v=el.value; if(v.trim().charAt(0)==='-'){ const e={value:v.trim().slice(1),selectionStart:v.length-1,setSelectionRange:()=>{}}; sayiGir(e); el.value='-'+e.value; } else sayiGir(el); }
 function kSayiOku(v){ v=String(v==null?'':v).trim(); const eksi=v.charAt(0)==='-'; const n=sayiOku(eksi?v.slice(1):v); return n===''?'':(isNaN(n)?NaN:(eksi?-n:n)); }
-function kalanIlSec(ad){
-  if(S.degisti && !confirm('Kaydedilmemiş değişiklikler var. Başka ile geçilsin mi?')){ $('ilsec').value=S.il; return; }
+function kalanIlSec(ad,_ok){
+  if(S.degisti && !_ok){ $('ilsec').value=S.il; onayKutusu('Kaydedilmemiş değişiklikler var. Başka ile geçilsin mi?\n(Kaydedilmemiş değişiklikler kaybolur.)','Evet, geç',()=>{ $('ilsec').value=ad; kalanIlSec(ad,true); },'Kaydedilmemiş değişiklik'); return; }
   S.il=ad; S.degisti=false;
   if(ad){ const i=S.veri.iller.find(x=>x.il===ad); const kod={}; KKOD.forEach(k=>{ const r=i.kodlar.find(x=>x.kod===k); kod[k]=r?r.tertipler.map(t=>({tertip:t.tertip,tutar:t.tutar,eko:t.eko||''})):[]; if(!kod[k].length) kod[k]=[{tertip:'',tutar:'',eko:''}]; });
     S.taslak={taban:S.veri.zaman,cevap:i.cevap||'',tarih:i.tarih||'',sayi:i.sayi||'',not:i.not||'',ek1:i.ek1||'',ek2:i.ek2||'',teyit:!!i.teyit,kod,net:(i.net&&i.net.elle)?Object.fromEntries(i.kodlar.map(k=>[k.kod,k.mahsup])):null}; } else S.taslak=null;
@@ -945,7 +964,7 @@ function kalanKaydet(zorla){
   if(t.netHata&&t.net) return toast('Netleştirme dağıtımı il toplamına eşit değil.');
   cagir('kalanKaydet',[S.oturum.token,S.donem,S.il,{cevap:t.cevap,tarih:t.tarih,sayi:t.sayi,not:t.not,satirlar,net:t.net||null,ek1:t.ek1,ek2:t.ek2,teyit:!!t.teyit},t.taban,!!zorla],r=>{
     yuk(false);
-    if(!r.ok){ if(r.cakisma){ if(confirm(r.mesaj)) kalanKaydet(true); return; } toast(r.mesaj||'Kaydedilemedi.'); return; }
+    if(!r.ok){ if(r.cakisma){ onayKutusu(r.mesaj,'Evet, yine de kaydet',()=>kalanKaydet(true),'Başka biri değiştirdi'); return; } toast(r.mesaj||'Kaydedilemedi.'); return; }
     S.veri=r.veri; S.degisti=false; kalanIlSec(S.il); const ki=S.veri.iller.find(x=>x.il===S.il);
     if(!r.degisiklikYok) tik('Kaydedildi');
     toast(r.degisiklikYok?'Değişiklik yoktu.':(ki&&ki.kDurum==='ONAY'?'✓ Kaydedildi. ⚠ Bu il onay bekliyor: il ayrıntısından kontrol edip onaylayın.':'✓ Kaydedildi.'),6000);
@@ -965,8 +984,8 @@ function sirauyari(i,a){
   if(a.id==='2a'&&!(i.talep>0)) return 'talep yok';
   return '';
 }
-function topluAc(){
-  if(S.degisti&&!confirm('Kaydedilmemiş il değişiklikleri var. Yine de toplu işleme geçilsin mi? (Kaydedilmemişler kaybolmaz, il ekranında kalır.)')) return;
+function topluAc(_ok){
+  if(S.degisti&&!_ok){ onayKutusu('Kaydedilmemiş il değişiklikleri var. Yine de toplu işleme geçilsin mi?\n(Kaydedilmemişler kaybolmaz, il ekranında kalır.)','Evet, toplu işleme geç',()=>topluAc(true),'Kaydedilmemiş değişiklik'); return; }
   if(!S.tp) S.tp={adim:'2a',d:{},iller:[],hepsi:false,ara:''};
   topluCiz();
 }
@@ -1032,8 +1051,8 @@ function topluListeCiz(l){
     l.map(x=>'<tr><td>'+esc(x.no)+'</td><td>'+esc(x.zaman)+'</td><td>'+esc(x.kullanici)+'</td><td>'+esc(x.donemAd)+'</td><td>'+esc(x.adimAd)+'<div class="kucuk">'+esc(x.bilgi)+'</div></td><td>'+x.iller.length+' il<div class="kucuk">'+esc(x.iller.join(', '))+'</div></td>'+
       '<td>'+(x.geriAlindi?'<span class="kucuk">geri alındı<br>'+esc(x.geriAlindi)+'</span>':'<button class="btn ikincil" style="padding:7px 12px" onclick="topluGeriAl(\''+esc(x.no)+'\')">Geri al</button>')+'</td></tr>').join('')+'</tbody></table>':'<div class="bos">Henüz toplu işlem yok.</div>');
 }
-function topluGeriAl(no){
-  if(!confirm(no+' numaralı toplu işlem geri alınsın mı? İllerin bu alanları işlemden önceki hâline döner.')) return;
+function topluGeriAl(no,_ok){
+  if(!_ok){ onayKutusu(no+' numaralı toplu işlem geri alınsın mı?\nİllerin bu alanları işlemden önceki hâline döner.','Evet, geri al',()=>topluGeriAl(no,true),'Geri alınsın mı?'); return; }
   yuk(true,'Geri alınıyor…');
   cagir('topluGeriAl',[S.oturum.token,no],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj); return; }
     toast('✓ Geri alındı: '+r.donen+' il'+(r.atlanan?' · '+r.atlanan+' il sonradan değiştiği için atlandı ('+r.atlananIller.join(', ')+')':''),6500);
