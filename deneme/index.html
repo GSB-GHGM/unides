@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="author" content="AHMET KÜÇÜKYAĞCI">
-<meta name="unides-surum" content="2.5">
+<meta name="unides-surum" content="2.6">
 <!-- ÜNİDES Nakit Takip V2 – Tüm Dönemler · ekran · ANA ADRES (19.11.2026 geçiş) · eski v13 ekranı: eski_v13_index.html · Yazar: AHMET KÜÇÜKYAĞCI -->
 <meta name="theme-color" content="#6b2d5c">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
@@ -1051,7 +1051,8 @@ function kalanDetay(ad){
 function kalanVeriCiz(){
   const l=S.veri.iller;
   let h=donemBaslik()+aktifHtml()+'<div class="ilsec"><select id="ilsec" onchange="kalanIlSec(this.value)"><option value="">— İl seçin —</option>'+
-    l.map(i=>'<option'+(i.il===S.il?' selected':'')+' value="'+esc(i.il)+'">'+esc(i.il)+' · '+esc((KDURUM[i.kDurum]||['—'])[0])+(i.toplam?' · '+tl0(i.toplam):'')+'</option>').join('')+'</select></div>';
+    l.map(i=>'<option'+(i.il===S.il?' selected':'')+' value="'+esc(i.il)+'">'+esc(i.il)+' · '+esc((KDURUM[i.kDurum]||['—'])[0])+(i.toplam?' · '+tl0(i.toplam):'')+'</option>').join('')+'</select>'+
+    '<button class="toplubtn" onclick="kalanBakiyeExcel()" title="5. ve 6. dönem kalan bakiyeleri tek Excel’de, il il renkli">⬇ Kalan bakiye Excel’i</button></div>';
   if(!S.il){ $('ana').innerHTML=h+'<div class="bos">Kalan bakiye girmek için il seçin.</div>'; $('kaydetbar').style.display='none'; return; }
   const t=S.taslak, io=l.find(x=>x.il===S.il);
   if(io&&io.kontrol) h+=io.kontrol.onay?'<div class="uyarik" style="background:#E3F4E6;border-color:#9FD3AA;color:#1E5B2A;margin-bottom:10px">✓ Onaylı: '+esc(io.kontrol.onay.kim)+' · '+esc(io.kontrol.onay.zaman)+' (değişiklik kaydedilirse onay düşer)</div>'
@@ -1538,6 +1539,14 @@ function mYukluOnayla(){
   const l=S.mp.dosyalar.filter(x=>x.sec); if(!l.length) return;
   onayKutusu(l.length+' ilin kalan düşmesi onaylanacak:\n'+l.map(x=>x.il+(x.tip==='degisik'?' (değişiyor)':'')).join(', ')+'\n\nOnaydan sonra bu iller için gönderim planlanabilir.','Evet, onayla',
     ()=>mGonder(l.map(x=>({il:x.il,dus:x.dus})),r=>{ S.mp.dosyalar.forEach(x=>{ if(x.sec&&!(r.hatalar||[]).some(h=>h.indexOf(x.il+':')===0)){ x.sec=false; x.tip='ayni'; } }); mPanelCiz(); panelAc(); tik(r.yazilan+' il onaylandı'); }),'Kalan düşmesi onayı');
+}
+/* --- 5. + 6. dönem kalan bakiyeleri tek Excel (20.11.2026, Ahmet: il il renkli) --- */
+function xlsxIndir(r,mesaj){ const b=atob(r.base64), u=new Uint8Array(b.length); for(let k=0;k<b.length;k++) u[k]=b.charCodeAt(k);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([u],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=r.ad; document.body.appendChild(a); a.click(); a.remove(); if(mesaj) toast(mesaj); }
+function kalanBakiyeExcel(){
+  if(window.SAHTE){ toast('Önizlemede bu Excel üretilmez; gerçek sistemde 5. ve 6. dönem tek dosyada, il il renkli iner.'); return; }
+  yuk(true,'Kalan bakiye Excel’i hazırlanıyor…');
+  cagir('kalanBakiyeExcel',[S.oturum.token],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj||'Excel hazırlanamadı.'); return; } xlsxIndir(r,'Excel indirildi: '+r.donem+' dönem, '+r.il+' il (ÖZET + dönem sayfaları).'); });
 }
 /* --- "Henüz gönderilmeyenler" listesi + Excel --- */
 function gBekleyenSatirlar(){
