@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="author" content="AHMET KÜÇÜKYAĞCI">
-<meta name="unides-surum" content="2.2.1">
+<meta name="unides-surum" content="2.3">
 <!-- ÜNİDES Nakit Takip V2 – Tüm Dönemler · ekran · ANA ADRES (19.11.2026 geçiş) · eski v13 ekranı: eski_v13_index.html · Yazar: AHMET KÜÇÜKYAĞCI -->
 <meta name="theme-color" content="#6b2d5c">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
@@ -46,6 +46,7 @@ main{max-width:1100px;margin:0 auto;padding:14px 16px 110px}
 .rozet{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:2px 8px;white-space:nowrap}
 .d1{background:var(--gri);color:#444}.d2{background:var(--kirmizi);color:var(--kirmiziK)}.d3{background:var(--sari);color:#7A5B00}
 .d4{background:var(--mavi);color:var(--maviK)}.d5{background:var(--turuncu);color:var(--turuncuK)}.d6{background:var(--yesil);color:var(--yesilK)}
+.dk{background:#FDE3D2;color:#9A3F12}.dkk{background:#E4F1E8;color:#2F6B45}
 .a1{background:var(--sari);color:#7A5B00}.a2{background:var(--mavi);color:var(--maviK)}.a3{background:var(--yesil);color:var(--yesilK)}
 .para{font-variant-numeric:tabular-nums}
 .bos{color:var(--soluk);text-align:center;padding:30px}
@@ -238,7 +239,7 @@ a{color:var(--lac2)}
 </style>
 </head>
 <body>
-<div class="demo" id="demoserit" style="display:none">ÖNİZLEME · örnek veri (07.11.2026 kopyası) · yapılan kayıtlar yalnız bu sayfada kalır, hiçbir tabloya yazılmaz · giriş: <b>tuba</b> veya <b>yonetici</b>, şifre <b>deneme</b></div>
+<div class="demo" id="demoserit" style="display:none">ÖNİZLEME · örnek veri (7. dönemde 16 ilin talepleri, gönderimleri ve 6. dönem kalanları UYDURMADIR) · yapılan kayıtlar yalnız bu sayfada kalır, hiçbir tabloya yazılmaz · giriş: <b>tuba</b> veya <b>yonetici</b>, şifre <b>deneme</b></div>
 <header>
   <h1>ÜNİDES Nakit Takip<small id="altbaslik">Gözlemci ekranı</small></h1>
   <select class="donemsec" id="donemsec" onchange="donemSec(this.value)" title="Dönem seçin"></select>
@@ -281,7 +282,13 @@ function sayiOku(v){
   else if(/^\d{1,3}(\.\d{3})+$/.test(v)){ v=v.replace(/\./g,''); }
   const n=Number(v); return isFinite(n)&&n>=0 ? Math.round(n*100)/100 : NaN;
 }
-const sayiYaz = n => (n===''||n==null||isNaN(n)) ? (n==null?'':String(n)) : Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2});
+const sayiYaz = n => (n===''||n==null||isNaN(n)) ? (n==null?'':String(n)) : Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+/* 19.11.2026 STANDART (Ahmet): bütün tutar kutuları 102.000,00 biçiminde. Yazarken binlik noktası kendiliğinden konur,
+   kutudan çıkınca virgülden sonra iki hane tamamlanır (102000 → 102.000,00). Eksi kalanlarda başa “-” yazılabilir. */
+document.addEventListener('input',e=>{ const el=e.target; if(el&&el.matches&&el.matches('input[inputmode=decimal]')) kSayiGir(el); },true);
+document.addEventListener('focusout',e=>{ const el=e.target; if(!(el&&el.matches&&el.matches('input[inputmode=decimal]'))) return;
+  const v=String(el.value||'').trim(); if(!v) return; const eksi=v.charAt(0)==='-'; const n=sayiOku(eksi?v.slice(1):v); if(n===''||Number.isNaN(n)) return;
+  const y=(eksi&&n>0?'-':'')+sayiYaz(n); if(y!==el.value){ el.value=y; } },true);
 /* Tutar yazılırken binlik noktaları kendiliğinden koyar: 50000 → 50.000, 1500,5 → 1.500,5 */
 function sayiGir(el){
   const v=el.value, sonda = el.selectionStart===v.length;
@@ -390,14 +397,16 @@ function cizIc(){
 /* ===================== GÖZLEMCİ ===================== */
 function ozetDeger(ad){ const r=(S.veri.ozet||[]).find(x=>String(x[0]).trim()===ad); return r?r[1]:''; }
 /* Tek durum: genel durum "Aktarım bekleniyor" ise yerine aktarımın hangi adımda olduğu yazılır */
-const DURUMLAR=[['Talep bekleniyor','d1'],['Kontrol gerekli','d2'],['Yönetime iletilmeli','d3'],['Yönetimden aktarım bekleniyor','d4'],['Hazine sürecinde – Genel Müdürlükten çıktı','d4'],['Nakit gönderildi – kapanış bekleniyor (EK-2)','d4'],['Kalan tutar işlemi bekleniyor','d5'],['Tamamlandı','d6']];
+const DURUMLAR=[['Talep bekleniyor','d1'],['Kontrol gerekli','d2'],['Yönetime iletilmeli','d3'],['Yönetimden aktarım bekleniyor','d4'],['Hazine sürecinde – Genel Müdürlükten çıktı','d4'],['Kısmen aktarıldı','dk'],['Nakit gönderildi – kapanış bekleniyor (EK-2)','d4'],['Kalanla karşılandı – kapanış bekleniyor (EK-2)','dkk'],['Kalan tutar işlemi bekleniyor','d5'],['Tamamlandı','d6']];
 function birDurum(i){
+  if(i.kismi) return 'Kısmen aktarıldı';
   const d=i.durum||'';
   if(dk(d)==='3'){ const a=dk(i.aktDurum); return a==='3' ? 'Hazine sürecinde – Genel Müdürlükten çıktı' : (a==='2' ? 'Yönetimden aktarım bekleniyor' : 'Yönetime iletilmeli'); }
   return d.slice(4)||'—';
 }
-function durumRozet(i){ const t=birDurum(i), r=DURUMLAR.find(x=>x[0]===t); return '<span class="rozet '+(r?r[1]:'d1')+'">'+esc(t)+'</span>'; }
+function durumRozet(i){ const t=birDurum(i), r=DURUMLAR.find(x=>x[0]===t); return '<span class="rozet '+(r?r[1]:'d1')+'">'+esc(t)+(i.kismi?' – '+tl0(i.bekleyen)+' bekliyor':'')+'</span>'; }
 function gozlemciCiz(){
+  if(gli()) return gGozlemci();
   const v=S.veri, iller=v.iller.filter(i=>i.proje>0||i.talep>0);
   const top=k=>iller.reduce((s,i)=>s+(Number(i[k])||0),0);
   const sayac={}; iller.forEach(i=>{ const d=birDurum(i); sayac[d]=(sayac[d]||0)+1; });
@@ -424,7 +433,7 @@ function filtre(d){ S.filtre=d; gozlemciCiz(); }
 function listeCiz(){
   const q=S.ara.trim().toLocaleUpperCase('tr-TR');
   const l=S.veri.iller.filter(i=>(i.proje>0||i.talep>0)&&(!S.filtre||birDurum(i)===S.filtre)&&(!q||i.il.indexOf(q)>=0));
-  $('liste').innerHTML = l.length? l.map(i=>
+  $('liste').innerHTML = l.length? l.map(i=> gli()? gKart(i) :
     '<div class="ilkart" onclick="ilDetay(\''+esc(i.il)+'\')"><div class="ad">'+esc(i.il)+' <span class="kucuk">· '+i.proje+' proje</span></div>'+
     '<div>'+durumRozet(i)+'</div>'+
     '<div class="alt"><span>Talep <b class="para">'+tl0(i.talep)+'</b></span>'+
@@ -437,13 +446,14 @@ function ilDetay(ad){
   h+='<div class="satirlar">'+
     sat('Resmi yazı',(i.resmi||'—')+(i.rTarih?' · '+trTarih(i.rTarih):'')+(i.rSayi?' · '+esc(i.rSayi):''))+sat('Kontrol',i.kontrol||'—')+
     sat('Talep',tl(i.talep))+sat('Üst sınır',tl(i.ust))+
-    sat('Yönetime yazı',i.yonetime==='Evet'?('Evet'+(i.yTarih?' · '+trTarih(i.yTarih):'')+(i.ySayi?' · '+i.ySayi:'')):(i.yonetime||'—'))+
+    (gli()?sat('Gönderilecek net',tl(i.net))+sat('Henüz gönderilmeyen',tl(i.bekleyen)):sat('Yönetime yazı',i.yonetime==='Evet'?('Evet'+(i.yTarih?' · '+trTarih(i.yTarih):'')+(i.ySayi?' · '+i.ySayi:'')):(i.yonetime||'—'))+
     sat('Aktarım',i.aktDurum?i.aktDurum.slice(4)+(i.aTarih?' · '+trTarih(i.aTarih)+(i.aSayi?' · '+i.aSayi:''):''):'—')+
     (i.hTarih||i.hNo?sat('Ödeme emri',(i.hTarih?trTarih(i.hTarih):'')+(i.hNo?' · No '+esc(i.hNo):'')):'')+
-    (i.nTarih?sat('Nakit karşılandı',trTarih(i.nTarih)):'')+
+    (i.nTarih?sat('Nakit karşılandı',trTarih(i.nTarih)):''))+
     sat('Aktarılan',tl(i.aktarilan))+sat('Kapanış formu (EK-2)',i.ek2||'—')+sat('Harcanan',tl(i.harcanan))+
     sat('İlin elindeki kalan tutar','<b>'+tl(i.elindeki)+'</b>',true)+
     sat('Kalan tutar ne olacak?',i.kDurum?esc(i.kDurum)+(i.kAciklama?' · '+esc(i.kAciklama):''):'—')+(i.not?sat('Not',i.not):'')+'</div>';
+  if(gli()) h+='<div class="altbaslik" style="margin-top:14px">Kalan düşme ('+esc(kaynakAd())+')</div>'+gMahsupTablo(i)+'<div class="altbaslik" style="margin-top:14px">Gönderimler</div>'+gGonderimListe(i,false);
   h+='<table class="t"><thead><tr><th>S.N.</th><th>Proje</th><th style="text-align:right">Talep</th><th>Kapanış (EK-2)</th><th style="text-align:right">Kalan</th></tr></thead><tbody>'+
     ps.map(p=>'<tr><td>'+p.sn+'</td><td>'+esc(p.ad)+'<div class="kucuk">'+esc(p.tur)+(p.uni?' · '+esc(p.uni):'')+'</div>'+
       ((p.uyari1||p.uyari2)?'<div class="uy">'+esc([p.uyari1,p.uyari2].filter(Boolean).join(' · '))+'</div>':'')+'</td>'+
@@ -561,7 +571,7 @@ function veriCiz(){
     '<div class="uy" id="teruy"></div></div></details>';
 
   // 2 · AKTARIM (iki parça)
-  h+='<details class="bolum" '+(t.ac2?'open':'')+' ontoggle="S.taslak.ac2=this.open"><summary>2 · Aktarım<span class="sag" id="ozet2"></span></summary><div class="gov">'+
+  if(gli()) h+=gVeriBolum(o); else h+='<details class="bolum" '+(t.ac2?'open':'')+' ontoggle="S.taslak.ac2=this.open"><summary>2 · Aktarım<span class="sag" id="ozet2"></span></summary><div class="gov">'+
     '<div class="altkutu"><div class="altbaslik">2a · Yönetime yazı</div>'+
     seg('Yönetime yazıldı mı?','yonetime',['Evet','Hayır'],i.yonetime)+
     '<div class="iki"><div class="alan"><label>Yönetime yazı tarihi</label><input class="g" type="date" value="'+esc(i.yTarih)+'" oninput="ilAl(\'yTarih\',this.value)"></div>'+
@@ -661,7 +671,7 @@ function hesapla(){
   const aktarildi = !!i.nTarih;
   const aktarilan = aktarildi? talep : 0;
   const akt = aktarildi?'4 · Nakit aktarıldı': i.aTarih?'3 · Hazine sürecinde – Genel Müdürlükten çıktı': (i.yonetime==='Evet'?'2 · Yönetimden aktarım bekleniyor':(i.resmi==='Geldi'?'1 · Yönetime iletilmeli':''));
-  const elindeki = aktarilan-harc;
+  const elindeki = gli()? ((S.veri.iller.find(x=>x.il===S.il)||{}).elindeki||0) : aktarilan-harc;
   const eksik=[]; kod.forEach((x,j)=>{ const d=$('ter'+j); if(d) d.style.display = x>0?'block':'none'; if(x>0 && !String(i['t'+(j+1)]||'').trim()) eksik.push(j<4?KOD[j]:'DİĞER'); });
   if(kod[4]>0 && !String(i.digerKod||'').trim()) eksik.push('DİĞER kodu');
   const tu=$('teruy'); if(tu) tu.textContent = eksik.length? 'Tertip eksik: '+eksik.join(', ') : '';
@@ -975,7 +985,8 @@ const TADIM=[
   {id:'2a',ad:'2a · Yönetime yazı',ac:'Yönetime yazının tarihi ve sayısı',alan:[['yTarih','Yönetime yazı tarihi','date'],['ySayi','Yönetime yazı sayısı','text']],sabit:{yonetime:'Evet'},bekleyen:'1'},
   {id:'2b',ad:'2b · Yönetimin aktarım yazısı',ac:'Yönetimin illere aktarım yazısının tarihi ve sayısı',alan:[['aTarih','Aktarım yazısı tarihi','date'],['aSayi','Aktarım yazısı sayısı','text']],bekleyen:'2'},
   {id:'2c',ad:'2c · Ödeme emri',ac:'Ödeme emri belgesinin tarihi ve numarası',alan:[['hTarih','Ödeme emri tarihi','date'],['hNo','Ödeme emri no','text']],bekleyen:'3'},
-  {id:'2n',ad:'2c · Nakit karşılanma',ac:'Nakit karşılanma tarihi (girilince “Nakit aktarıldı”)',alan:[['nTarih','Nakit karşılanma tarihi','date']],bekleyen:'3'}];
+  {id:'2n',ad:'2c · Nakit karşılanma',ac:'Nakit karşılanma tarihi (girilince “Nakit aktarıldı”)',alan:[['nTarih','Nakit karşılanma tarihi','date']],bekleyen:'3'},
+  {id:'gp',ad:'Gönderim planla',ac:'Bütçeye göre illere gönderilecek tutar (kısmi gönderim) · yalnız 7. dönem ve sonrası',alan:[],bekleyen:'1',gonderimli:true}];
 function sirauyari(i,a){
   if(a.id==='2b'&&i.yonetime!=='Evet') return '2a (yönetime yazı) girilmemiş';
   if(a.id==='2c'&&!i.aTarih) return '2b (aktarım yazısı) girilmemiş';
@@ -985,17 +996,19 @@ function sirauyari(i,a){
 }
 function topluAc(_ok){
   if(S.degisti&&!_ok){ onayKutusu('Kaydedilmemiş il değişiklikleri var. Yine de toplu işleme geçilsin mi?\n(Kaydedilmemişler kaybolmaz, il ekranında kalır.)','Evet, toplu işleme geç',()=>topluAc(true),'Kaydedilmemiş değişiklik'); return; }
-  if(!S.tp) S.tp={adim:'2a',d:{},iller:[],hepsi:false,ara:''};
+  if(!S.tp) S.tp={adim:gli()?'gp':'2a',d:{},iller:[],hepsi:false,ara:''};
   topluCiz();
 }
 function topluCiz(){
+  if(S.tp.adim==='gp'&&gli()) return gPlanCiz();
   const tp=S.tp, a=TADIM.find(x=>x.id===tp.adim), l=S.veri.iller.filter(i=>i.talep>0||i.proje>0);
   const aday=l.filter(i=>tp.hepsi || String(i.aktDurum).charAt(0)===a.bekleyen || tp.iller.indexOf(i.il)>=0);
   const q=tp.ara.trim().toLocaleUpperCase('tr-TR');
   const secili=l.filter(i=>tp.iller.indexOf(i.il)>=0);
   let h='<div class="ust"><h2>⇉ Toplu işlem · '+esc(D().ad)+'</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
     '<div class="altbaslik" style="margin-top:0">1 · Hangi adım?</div><div class="adimlar" style="margin-top:6px">'+
-    TADIM.map(x=>'<button class="'+(x.id===tp.adim?'on':'')+'" onclick="S.tp.adim=\''+x.id+'\';S.tp.d={};topluCiz()"><b>'+esc(x.ad)+'</b><span class="kucuk">'+esc(x.ac)+'</span></button>').join('')+'</div>'+
+    TADIM.filter(x=>!x.gonderimli||gli()).map(x=>'<button class="'+(x.id===tp.adim?'on':'')+'" onclick="S.tp.adim=\''+x.id+'\';S.tp.d={};topluCiz()"><b>'+esc(x.ad)+'</b><span class="kucuk">'+esc(x.ac)+'</span></button>').join('')+'</div>'+
+    (gli()?'<div class="kucuk" style="margin-top:8px">Bu dönemde 2a/2b/2c/nakit adımları her ilin <b>son açık gönderimine</b> yazılır.</div>':'')+
     '<div class="altbaslik" style="margin-top:16px">2 · Hangi iller? <span class="kucuk" style="font-weight:400">('+secili.length+' seçili)</span></div>'+
     '<div class="seg" style="margin-top:6px"><button type="button" onclick="topluTumu(true)">Listedekilerin tümünü seç</button><button type="button" onclick="topluTumu(false)">Seçimi temizle</button>'+
     '<button type="button" '+((S.sonOdenek||[]).length?'':'disabled title="Bu oturumda henüz ödenek tablosu indirilmedi"')+' onclick="topluOdenek()">Son indirilen ödenek tablosundaki iller'+((S.sonOdenek||[]).length?' ('+S.sonOdenek.length+')':'')+'</button></div>'+
@@ -1079,6 +1092,217 @@ function donemAyarKaydet(){
   cagir('donemAyarKaydet',[S.oturum.token,a],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj); return; }
     toast('✓ Dönem ayarları kaydedildi'+(r.degisen.length?': '+r.degisen.join('; '):' (değişiklik yok)'),6000);
     donemleriYukle(()=>donemAyarCiz()); });
+}
+
+/* ===================== V2.3 · 7. DÖNEM VE SONRASI: KALAN DÜŞME (MAHSUP) + KISMİ GÖNDERİM (19.11.2026 kararları) =====================
+   Yazar: AHMET KÜÇÜKYAĞCI. Sunucu her il için şunları verir (S.veri.gonderimli=true olan dönemlerde):
+   i.m = {talep[5], dus{'5':[5],'6':[5]}, dusToplam[5], net[5], netToplam, dusulen, devreden{}, uyarilar[], notlar[]}
+   i.gonderimler=[{no,kod[5],toplam,asama,asamaAd,yTarih,ySayi,aTarih,aSayi,hTarih,hNo,nTarih}], i.net, i.gonderilen, i.planlanan,
+   i.yolda (planlanıp nakdi gelmeyen), i.planlanmamis, i.bekleyen (= net − gönderilen), i.kodBekleyen[5], i.kodPlanlanmamis[5], i.kismi */
+const GKOD=['03.02','03.03','03.05','06.01','DİĞER'];
+function gli(){ return !!(S.veri&&S.veri.gonderimli); }
+function kaynakAd(){ return (S.veri.kaynaklar||[]).map(k=>k.ad).join(' + ')||'—'; }
+function gTop(l,k){ return l.reduce((s,i)=>s+(Number(i[k])||0),0); }
+
+/* --- gözlemci (gönderimli dönem) --- */
+function gGozlemci(){
+  const v=S.veri, iller=v.iller.filter(i=>i.proje>0||i.talep>0);
+  const sayac={}; iller.forEach(i=>{ const d=birDurum(i); sayac[d]=(sayac[d]||0)+1; });
+  const talep=gTop(iller,'talep'), dus=iller.reduce((s,i)=>s+((i.m&&i.m.dusulen)||0),0), net=gTop(iller,'net'), gon=gTop(iller,'gonderilen'), bek=gTop(iller,'bekleyen');
+  const kismi=iller.filter(i=>i.kismi).length, uyar=iller.filter(i=>i.talep>0&&i.m&&i.m.uyarilar.some(u=>u.indexOf('onay bekliyor')>=0||u.indexOf('bilinmiyor')>=0)).length;
+  let h=donemBaslik()+'<div class="kartlar">'+
+    kpi('Onaylı proje', iller.reduce((s,i)=>s+i.proje,0)+' proje · '+iller.length+' il')+
+    kpi('Talep toplamı', tl0(talep), iller.filter(i=>i.talep>0).length+' il')+
+    kpi('Düşülen kalan', tl0(dus), kaynakAd()+(uyar?' · ⚠ '+uyar+' ilde kalan onay/bilgi bekliyor':''))+
+    kpi('Gönderilecek net', tl0(net), 'talep − düşülen kalan')+
+    kpi('Gönderilen', tl0(gon), iller.filter(i=>i.gonderilen>0).length+' il', false, net?gon/net:0)+
+    kpi('Henüz gönderilmeyen', tl0(bek), (kismi?kismi+' il kısmen aktarıldı · ':'')+iller.filter(i=>i.bekleyen>0).length+' il', true)+
+  '</div>';
+  h+='<div style="margin:-4px 0 12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ana" onclick="gBekleyenAc()">📋 Henüz gönderilmeyenler ('+tl0(bek)+')</button></div>';
+  const dkT=k=>iller.filter(i=>dk(i.aktDurum)===k).reduce((s,i)=>s+(k==='1'?i.planlanmamis:i.yolda||0),0);
+  h+=akis('Para şu an nerede?',[['Kalanla karşılanan',dus,'#8FBF9F'],['Henüz planlanmadı',gTop(iller,'planlanmamis'),'#E9B44C'],['Yönetimde',dkT('2'),'#D3A2C4'],['Hazine sürecinde',dkT('3'),'#A8627F'],['Gönderildi',gon,'#6B2D5C']],talep);
+  const hb={}; v.iller.forEach(i=>{ if(!(i.proje>0||i.talep>0)){ hb[i.il]={renk:'#F4EFEB',pasif:true,durum:'Onaylı projesi yok'}; return; }
+    const d=birDurum(i); hb[i.il]={renk:HRENK[d]||'#D8CFC8',durum:d,alt:'Net '+tl0(i.net)+' · Gönderilen '+tl0(i.gonderilen)+(i.bekleyen>0?' · Bekleyen '+tl0(i.bekleyen):'')}; });
+  h+=harita(hb, DURUMLAR.filter(d=>sayac[d[0]]).map(d=>[d[0]+' ('+sayac[d[0]]+')',HRENK[d[0]]||'#D8CFC8',"filtre('"+(S.filtre===d[0]?'':d[0])+"')",S.filtre===d[0]]), ilDetay, S.filtre?(il=>hb[il]&&hb[il].durum===S.filtre):null);
+  h+='<div class="cipler"><button class="cip'+(S.filtre===''?' secili':'')+'" onclick="filtre(\'\')">Tümü ('+iller.length+')</button>'+
+    DURUMLAR.filter(d=>sayac[d[0]]).map(d=>'<button class="cip'+(S.filtre===d[0]?' secili':'')+'" onclick="filtre(\''+d[0]+'\')">'+esc(d[0])+' ('+sayac[d[0]]+')</button>').join('')+'</div>';
+  h+='<input class="ara" placeholder="İl ara…" value="'+esc(S.ara)+'" oninput="S.ara=this.value;listeCiz()">';
+  h+='<div class="liste" id="liste"></div><p class="kucuk" style="margin-top:14px">Son güncelleme: '+new Date(v.zaman).toLocaleString('tr-TR')+' · Düşülen kalanlar: '+esc(kaynakAd())+'. Projesi olmayan iller listelenmez.</p>';
+  $('ana').innerHTML=h; listeCiz();
+}
+function gKart(i){
+  return '<div class="ilkart" onclick="ilDetay(\''+esc(i.il)+'\')"><div class="ad">'+esc(i.il)+' <span class="kucuk">· '+i.proje+' proje</span></div>'+
+    '<div>'+durumRozet(i)+'</div>'+
+    '<div class="alt"><span>Talep <b class="para">'+tl0(i.talep)+'</b></span>'+
+    (i.m&&i.m.dusulen?'<span>Düşülen <b class="para">−'+tl0(i.m.dusulen)+'</b></span>':'')+
+    '<span>Net <b class="para">'+tl0(i.net)+'</b></span>'+
+    '<span>Gönderilen <b class="para">'+tl0(i.gonderilen)+'</b></span>'+
+    (i.bekleyen>0&&i.talep>0?'<span>Bekleyen <b class="para" style="color:#B4532A">'+tl0(i.bekleyen)+'</b></span>':'')+'</div>'+
+    (i.talep>0&&i.m&&i.m.uyarilar.length?'<div class="uy" style="margin-top:4px">⚠ '+esc(i.m.uyarilar.filter(u=>u.indexOf('cevabı bekleniyor')<0).join(' · ')||i.m.uyarilar[0])+'</div>':'')+
+    adimCizgi(i)+'</div>';
+}
+
+/* --- il ayrıntısı: düşme tablosu + gönderimler --- */
+function gMahsupTablo(i){
+  if(!i.m||!(i.talep>0)) return '<div class="bos" style="padding:10px">Talep girilmedi.</div>';
+  const m=i.m, ks=Object.keys(m.dus).sort(), kul=[0,1,2,3,4].filter(j=>m.talep[j]>0||m.dusToplam[j]>0||(i.kodGonderilen||[])[j]>0);
+  const ad=kd=>((S.veri.kaynaklar||[]).find(k=>k.id===kd)||{ad:kd+'. Dönem'}).ad;
+  let h='<div style="overflow-x:auto;margin-top:8px"><table class="t" style="min-width:560px"><thead><tr><th>Kod</th><th style="text-align:right">Talep</th>'+ks.map(kd=>'<th style="text-align:right">− '+esc(ad(kd))+'</th>').join('')+
+    '<th style="text-align:right">Net</th><th style="text-align:right">Gönderilen</th><th style="text-align:right">Bekleyen</th></tr></thead><tbody>'+
+    kul.map(j=>'<tr><td>'+GKOD[j]+'</td><td class="s">'+tl(m.talep[j])+'</td>'+ks.map(kd=>'<td class="s">'+(m.dus[kd][j]?'−'+tl(m.dus[kd][j]):'—')+'</td>').join('')+
+      '<td class="s"><b>'+tl(m.net[j])+'</b></td><td class="s">'+tl((i.kodGonderilen||[])[j]||0)+'</td><td class="s">'+tl((i.kodBekleyen||[])[j]||0)+'</td></tr>').join('')+
+    '<tr style="font-weight:700"><td>Toplam</td><td class="s">'+tl(i.talep)+'</td>'+ks.map(kd=>{ const t=m.dus[kd].reduce((s,x)=>s+x,0); return '<td class="s">'+(t>0.004?'−'+tl(t):'—')+'</td>'; }).join('')+
+    '<td class="s">'+tl(i.net)+'</td><td class="s">'+tl(i.gonderilen)+'</td><td class="s">'+tl(i.bekleyen)+'</td></tr></tbody></table></div>';
+  if(m.uyarilar.length) h+='<div class="uyarik">⚠ '+m.uyarilar.map(esc).join('<br>⚠ ')+'</div>';
+  if(m.notlar.length) h+='<div class="kucuk" style="margin-top:6px;background:#F7F2EE;border-radius:8px;padding:6px 10px">ℹ '+m.notlar.map(esc).join('<br>ℹ ')+'</div>';
+  return h;
+}
+function gGonderimListe(i,duzen){
+  const gl=i.gonderimler||[];
+  if(!gl.length) return '<div class="kucuk" style="margin-top:8px">Henüz gönderim kaydı yok.'+(i.planlanmamis>0?' Planlanacak: <b class="para">'+tl(i.planlanmamis)+'</b>':'')+'</div>';
+  return gl.map(g=>{
+    const kd=[0,1,2,3,4].filter(j=>g.kod[j]>0).map(j=>GKOD[j]+' '+tl0(g.kod[j])).join(' · ');
+    const adim=[g.yTarih||g.ySayi?'Yönetime yazı '+(g.yTarih?trTarih(g.yTarih):'')+(g.ySayi?' · '+g.ySayi:''):'',
+      g.aTarih||g.aSayi?'Aktarım yazısı '+(g.aTarih?trTarih(g.aTarih):'')+(g.aSayi?' · '+g.aSayi:''):'',
+      g.hTarih||g.hNo?'Ödeme emri '+(g.hTarih?trTarih(g.hTarih):'')+(g.hNo?' · No '+g.hNo:''):'',
+      g.nTarih?'Nakit '+trTarih(g.nTarih):''].filter(Boolean).join(' → ');
+    return '<div class="altkutu" style="margin-top:8px"><div class="altbaslik" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>'+g.no+'. gönderim · <b class="para">'+tl(g.toplam)+'</b></span>'+
+      '<span class="rozet '+(g.asama==='4'?'d6':g.asama==='1'?'d3':'d4')+'">'+esc(g.asamaAd)+'</span></div>'+
+      '<div class="kucuk">'+esc(kd)+'</div>'+(adim?'<div class="kucuk" style="margin-top:3px">'+esc(adim)+'</div>':'')+
+      (duzen?'<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn ikincil" style="padding:6px 12px" onclick="gFormAc('+g.no+')">Düzenle / tarih gir</button>'+
+        (g.no===gl.length&&!g.nTarih?'<button class="btn ikincil" style="padding:6px 12px" onclick="gSil('+g.no+')">Sil</button>':'')+'</div>':'')+'</div>';
+  }).join('');
+}
+
+/* --- veri girişi: "2 · Kalan düşme ve gönderimler" bölümü --- */
+function gVeriBolum(o){
+  const t=S.taslak;
+  return '<details class="bolum" '+(t.ac2!==false?'open':'')+' ontoggle="S.taslak.ac2=this.open"><summary>2 · Kalan düşme ve gönderimler<span class="sag kucuk">'+
+    (o.talep>0?'net '+tl0(o.net)+' · gönderilen '+tl0(o.gonderilen)+(o.bekleyen>0?' · bekleyen '+tl0(o.bekleyen):''):'')+'</span></summary><div class="gov">'+
+    '<div class="kucuk" style="margin-top:10px">Düşülen kalanlar: <b>'+esc(kaynakAd())+'</b>. Tablo, <b>kaydedilmiş</b> talebe göre hesaplanır (talebi değiştirdiyseniz önce kaydedin).</div>'+
+    gMahsupTablo(o)+
+    (o.kalanlaKarsilandi?'<div class="altkutu yesilkutu" style="margin-top:12px"><div class="altbaslik">Kalanla karşılandı — nakit gönderilmeyecek</div>'+
+      (o.dusulduIsaretli?'<div class="kucuk">✓ '+esc(kaynakAd())+' kalanları “'+esc(D().ad)+' döneminde düşüldü” olarak işaretlendi'+(o.dusulduBilgi?' ('+esc(o.dusulduBilgi)+')':'')+'.</div>':
+      '<div class="kucuk" style="margin-bottom:8px">Bu ilin talebinin tamamı kalanlarla karşılandı. İle ayrıca cevap yazıldıktan sonra kalanları düşüldü olarak işaretleyin.</div><button class="btn ana" style="width:100%" onclick="gKalanlaIsaretle()">Kalanları “düşüldü” olarak işaretle</button>')+'</div>':'')+
+    '<div class="altbaslik" style="margin-top:14px">Gönderimler</div>'+gGonderimListe(o,true)+
+    (o.talep>0&&o.planlanmamis>0.004?'<button class="btn ana" style="width:100%;margin-top:10px" onclick="gFormAc(0)">+ Yeni gönderim (planlanacak '+tl0(o.planlanmamis)+')</button>':
+      (o.talep>0&&o.net>0?'<div class="kucuk" style="margin-top:8px">Net tutarın tamamı gönderimlere dağıtıldı.</div>':''))+
+    '<div id="gform"></div></div></details>';
+}
+function gKalanlaIsaretle(){
+  if(S.degisti){ toast('Önce il değişikliklerini kaydedin.'); return; }
+  onayKutusu(S.il+' ilinin '+kaynakAd()+' kalanları “'+D().ad+' döneminde düşüldü” olarak işaretlensin mi?\n(Bu ile nakit gönderilmeyecek; talebin tamamı kalanlarla karşılandı.)','Evet, işaretle',()=>{
+    yuk(true,'İşaretleniyor…'); cagir('kalanlaKarsilandi',[S.oturum.token,S.donem,S.il],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj||'İşaretlenemedi.'); return; } S.veri=r.veri; taslakKur(S.il); ciz(); tik('Kalanlar düşüldü olarak işaretlendi'); }); },'Kalanla karşılandı');
+}
+function gFormAc(no){
+  if(S.degisti){ toast('Önce il değişikliklerini kaydedin.'); return; }
+  const o=S.veri.iller.find(x=>x.il===S.il), g=no?(o.gonderimler||[]).find(x=>x.no===no):null;
+  const v=g?g.kod:o.kodPlanlanmamis, b=g?g:{};
+  S.gf={no:no||0,kod:v.slice(),d:{yTarih:b.yTarih||'',ySayi:b.ySayi||'',aTarih:b.aTarih||'',aSayi:b.aSayi||'',hTarih:b.hTarih||'',hNo:b.hNo||'',nTarih:b.nTarih||''}};
+  const kul=[0,1,2,3,4].filter(j=>o.m.net[j]>0||v[j]>0);
+  const al=(k,ad,tip)=>'<div class="alan"><label>'+ad+'</label><input class="g" type="'+tip+'" value="'+esc(S.gf.d[k])+'" oninput="S.gf.d[\''+k+'\']=this.value"></div>';
+  $('gform').innerHTML='<div class="altkutu yesilkutu" style="margin-top:12px"><div class="altbaslik">'+(no?no+'. gönderimi düzenle':'Yeni gönderim ('+((o.gonderimler||[]).length+1)+'.)')+'</div>'+
+    '<div class="kucuk" style="margin-bottom:6px">'+(no?'':'Öneri: kalan net tutarın tamamı. Bütçeye göre değiştirin. ')+'Tutarlar KDV dâhil, kod kod.</div>'+
+    kul.map(j=>'<div class="alan"><label>'+GKOD[j]+' <span class="kucuk">(net '+tl0(o.m.net[j])+' · planlanmamış '+tl0(o.kodPlanlanmamis[j]+(g?g.kod[j]:0))+')</span></label><input class="g" inputmode="decimal" value="'+(v[j]?sayiYaz(v[j]):'')+'" oninput="S.gf.kod['+j+']=sayiOku(this.value);gFormToplam()"></div>').join('')+
+    '<div class="hesap" id="gftop"></div>'+
+    '<div class="iki">'+al('yTarih','Yönetime yazı tarihi','date')+al('ySayi','Yönetime yazı sayısı','text')+'</div>'+
+    '<div class="iki">'+al('aTarih','Aktarım yazısı tarihi','date')+al('aSayi','Aktarım yazısı sayısı','text')+'</div>'+
+    '<div class="iki">'+al('hTarih','Ödeme emri tarihi','date')+al('hNo','Ödeme emri no','text')+'</div>'+
+    al('nTarih','Nakit karşılanma tarihi','date')+
+    '<div class="kucuk">Nakit karşılanma tarihi ilk kez girildiğinde bu ilin '+esc(kaynakAd())+' kalanları “'+esc(D().ad)+' döneminde düşüldü” olarak işaretlenir.</div>'+
+    '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn ana" style="flex:1" onclick="gKaydet()">Gönderimi kaydet</button><button class="btn ikincil" onclick="$(\'gform\').innerHTML=\'\'">Vazgeç</button></div></div>';
+  gFormToplam(); $('gform').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function gFormToplam(){ const t=S.gf.kod.reduce((s,x)=>s+(Number(x)||0),0); const e=$('gftop'); if(e) e.innerHTML='Bu gönderim: <b class="para">'+tl(t)+'</b>'+(S.gf.kod.some(x=>Number.isNaN(x))?' · <span class="uy">Tutar anlaşılamadı</span>':''); }
+function gKaydet(zorla){
+  const f=S.gf; if(f.kod.some(x=>Number.isNaN(x))){ toast('Tutarları düzeltin.'); return; }
+  const g=Object.assign({no:f.no||null,kod:f.kod.map(x=>Number(x)||0)},f.d);
+  yuk(true,'Gönderim kaydediliyor…');
+  cagir('gonderimKaydet',[S.oturum.token,S.donem,S.il,g,!!zorla],r=>{ yuk(false);
+    if(r.asim){ onayKutusu(r.mesaj,'Evet, yine de kaydet',()=>gKaydet(true),'Net tutar aşılıyor'); return; }
+    if(!r.ok){ toast(r.mesaj||'Kaydedilemedi.'); return; }
+    S.veri=r.veri; taslakKur(S.il); S.gf=null; ciz(); tik(r.no+'. gönderim kaydedildi'); });
+}
+function gSil(no){
+  onayKutusu(no+'. gönderim silinsin mi?\n(Yalnız son ve nakdi gönderilmemiş gönderim silinebilir.)','Evet, sil',()=>{ yuk(true,'Siliniyor…');
+    cagir('gonderimSil',[S.oturum.token,S.donem,S.il,no],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj); return; } S.veri=r.veri; taslakKur(S.il); ciz(); tik('Gönderim silindi'); }); },'Gönderim silinsin mi?');
+}
+
+/* --- "Henüz gönderilmeyenler" listesi + Excel --- */
+function gBekleyenSatirlar(){
+  const r=[]; S.veri.iller.filter(i=>i.talep>0&&i.bekleyen>0.004).forEach(i=>[0,1,2,3,4].forEach(j=>{ const b=(i.kodBekleyen||[])[j]||0; if(b>0.004) r.push({il:i.il,kod:GKOD[j],net:i.m.net[j],gon:(i.kodGonderilen||[])[j]||0,yolda:r2c(((i.kodPlanlanan||[])[j]||0)-((i.kodGonderilen||[])[j]||0)),bek:b,durum:birDurum(i)}); }));
+  return r;
+}
+function r2c(n){ return Math.round(n*100)/100; }
+function gBekleyenAc(){
+  const r=gBekleyenSatirlar(), il=[...new Set(r.map(x=>x.il))];
+  let h='<div class="ust"><h2>📋 Henüz gönderilmeyenler · '+esc(D().ad)+'</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
+    '<div class="satirlar">'+sat('İl',il.length+' il')+sat('Henüz gönderilmeyen','<b>'+tl(r.reduce((s,x)=>s+x.bek,0))+'</b>',true)+sat('Bunun yolda olan kısmı',tl(r.reduce((s,x)=>s+x.yolda,0))+' (gönderim planlandı, nakit henüz gelmedi)')+'</div>'+
+    '<button class="btn ana" style="width:100%;margin:10px 0" onclick="gBekleyenExcel()">⬇ Excel olarak indir</button>'+
+    (r.length?'<div style="overflow-x:auto"><table class="t" style="min-width:520px"><thead><tr><th>İl</th><th>Kod</th><th style="text-align:right">Net</th><th style="text-align:right">Gönderilen</th><th style="text-align:right">Yolda</th><th style="text-align:right">Bekleyen</th></tr></thead><tbody>'+
+    r.map(x=>'<tr><td>'+esc(x.il)+'</td><td>'+x.kod+'</td><td class="s">'+tl(x.net)+'</td><td class="s">'+tl(x.gon)+'</td><td class="s">'+tl(x.yolda)+'</td><td class="s"><b>'+tl(x.bek)+'</b></td></tr>').join('')+
+    '</tbody></table></div>':'<div class="bos">Gönderilmeyen tutar yok.</div>')+'</div>';
+  $('panel').innerHTML=h; panelAc();
+}
+function gBekleyenExcel(){
+  if(!window.SAHTE){ yuk(true,'Excel hazırlanıyor…');
+    cagir('bekleyenExcel',[S.oturum.token,S.donem],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj||'Excel hazırlanamadı.'); return; }
+      try{ const b=atob(r.base64), u=new Uint8Array(b.length); for(let k=0;k<b.length;k++) u[k]=b.charCodeAt(k);
+        const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([u],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=r.ad; document.body.appendChild(a); a.click(); a.remove();
+        toast('Excel indirildi: '+r.satir+' kalem, '+tl(r.toplam)+' (kopyası Drive’da “Ödenek Tabloları” klasöründe).'); }catch(e){ toast('Dosya Drive’a kaydedildi; indirme başlatılamadı.'); } });
+    return; }
+  const r=gBekleyenSatirlar(), sayi=n=>String(Math.round(n*100)/100).replace('.',',');
+  const tab='<table border="1"><tr><th colspan="7">ÜNİDES '+esc(D().ad)+' · Henüz gönderilmeyen tutarlar ('+new Date().toLocaleDateString('tr-TR')+') · Hazırlayan: AHMET KÜÇÜKYAĞCI</th></tr>'+
+    '<tr><th>İL</th><th>KOD</th><th>NET (talep − kalan)</th><th>GÖNDERİLEN</th><th>YOLDA</th><th>BEKLEYEN</th><th>DURUM</th></tr>'+
+    r.map(x=>'<tr><td>'+esc(x.il)+'</td><td>'+x.kod+'</td><td>'+sayi(x.net)+'</td><td>'+sayi(x.gon)+'</td><td>'+sayi(x.yolda)+'</td><td>'+sayi(x.bek)+'</td><td>'+esc(x.durum)+'</td></tr>').join('')+
+    '<tr><th colspan="5">TOPLAM</th><th>'+sayi(r.reduce((s,x)=>s+x.bek,0))+'</th><th></th></tr></table>';
+  const blob=new Blob(['﻿<html><head><meta charset="utf-8"></head><body>'+tab+'</body></html>'],{type:'application/vnd.ms-excel'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=new Date().toISOString().slice(0,10)+'_'+D().ad.replace(/\W+/g,'_')+'_Henuz_Gonderilmeyenler.xls'; a.click();
+  toast('Excel indirildi (önizlemede basit biçim; gerçek sistemde ödenek tablosu biçiminde .xlsx).');
+}
+
+/* --- toplu: bütçeye göre gönderim planı --- */
+function gPlanCiz(){
+  const tp=S.tp; tp.gp=tp.gp||{butce:'',oneri:{},yazi:{yTarih:'',ySayi:''},kontrol:false};
+  const l=S.veri.iller.filter(i=>i.talep>0&&i.planlanmamis>0.004), q=tp.ara.trim().toLocaleUpperCase('tr-TR');
+  const sec=l.filter(i=>tp.iller.indexOf(i.il)>=0), plTop=sec.reduce((s,i)=>s+i.planlanmamis,0), oTop=sec.reduce((s,i)=>s+(Number(tp.gp.oneri[i.il])||0),0);
+  let h='<div class="ust"><h2>⇉ Gönderim planla · '+esc(D().ad)+'</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
+    '<div class="adimlar" style="margin-top:0">'+TADIM.map(x=>'<button class="'+(x.id===tp.adim?'on':'')+'" onclick="S.tp.adim=\''+x.id+'\';S.tp.d={};topluCiz()"><b>'+esc(x.ad)+'</b><span class="kucuk">'+esc(x.ac)+'</span></button>').join('')+'</div>'+
+    '<div class="altbaslik" style="margin-top:16px">1 · Hangi iller? <span class="kucuk" style="font-weight:400">(planlanmamış net tutarı olan iller · '+sec.length+' seçili · '+tl0(plTop)+')</span></div>'+
+    '<div class="seg" style="margin-top:6px"><button type="button" onclick="S.tp.iller='+"S.veri.iller.filter(i=>i.talep>0&&i.planlanmamis>0.004).map(i=>i.il)"+';topluCiz()">Tümünü seç</button><button type="button" onclick="S.tp.iller=[];S.tp.gp.oneri={};topluCiz()">Seçimi temizle</button></div>'+
+    '<input class="ara" style="margin:8px 0 0" placeholder="İl ara…" value="'+esc(tp.ara)+'" oninput="S.tp.ara=this.value;topluCiz()">'+
+    '<div class="ilsecliste">'+l.filter(i=>!q||i.il.indexOf(q)>=0).map(i=>'<label><input type="checkbox" '+(tp.iller.indexOf(i.il)>=0?'checked':'')+' onchange="topluIl(\''+esc(i.il)+'\',this.checked)"> <span><b>'+esc(i.il)+'</b> <span class="kucuk">· planlanmamış '+tl0(i.planlanmamis)+(i.gonderilen>0?' · gönderilen '+tl0(i.gonderilen):'')+'</span>'+
+      (i.m.uyarilar.some(u=>u.indexOf('onay bekliyor')>=0||u.indexOf('bilinmiyor')>=0)?' <span class="uy" style="font-weight:400">⚠ kalan onay/bilgi bekliyor</span>':'')+'</span></label>').join('')+'</div>'+
+    '<div class="altbaslik" style="margin-top:16px">2 · Bu sefer gönderilecek toplam (bütçe)</div>'+
+    '<div class="iki"><div class="alan"><label>Bütçe (TL) — boş bırakılırsa seçilen illerin tamamı</label><input class="g" inputmode="decimal" value="'+esc(tp.gp.butce)+'" onchange="S.tp.gp.butce=this.value" oninput="S.tp.gp.butce=this.value"></div>'+
+    '<div class="alan"><label>&nbsp;</label><button class="btn ikincil" style="width:100%" onclick="gOner()">Oranla öner</button></div></div>'+
+    (sec.length?'<div style="overflow-x:auto;margin-top:8px"><table class="t" style="min-width:480px"><thead><tr><th>İl</th><th style="text-align:right">Planlanmamış</th><th style="text-align:right">Bu gönderim</th><th style="text-align:right">Sonra kalan</th></tr></thead><tbody>'+
+      sec.map(i=>{ const o=Number(tp.gp.oneri[i.il])||0; return '<tr><td>'+esc(i.il)+'</td><td class="s">'+tl(i.planlanmamis)+'</td><td class="s"><input class="g" style="max-width:150px;text-align:right" inputmode="decimal" value="'+(o?sayiYaz(o):'')+'" onchange="S.tp.gp.oneri[\''+esc(i.il)+'\']=sayiOku(this.value);topluCiz()"></td><td class="s">'+tl(Math.max(0,i.planlanmamis-o))+'</td></tr>'; }).join('')+
+      '<tr style="font-weight:700"><td>Toplam</td><td class="s">'+tl(plTop)+'</td><td class="s">'+tl(oTop)+'</td><td class="s">'+tl(Math.max(0,plTop-oTop))+'</td></tr></tbody></table></div>':'')+
+    '<div class="altbaslik" style="margin-top:16px">3 · Yönetime yazı (isteğe bağlı — şimdi ya da sonra 2a adımıyla)</div><div class="iki">'+
+    '<div class="alan"><label>Yönetime yazı tarihi</label><input class="g" type="date" value="'+esc(tp.gp.yazi.yTarih)+'" oninput="S.tp.gp.yazi.yTarih=this.value"></div>'+
+    '<div class="alan"><label>Yönetime yazı sayısı</label><input class="g" value="'+esc(tp.gp.yazi.ySayi)+'" oninput="S.tp.gp.yazi.ySayi=this.value"></div></div>'+
+    (oTop>0?'<label class="teyit" style="display:block;margin-top:12px;background:#FDF0E6;border:1px solid #F0C9A8;border-radius:8px;padding:8px 10px"><input type="checkbox" '+(tp.gp.kontrol?'checked':'')+' onchange="S.tp.gp.kontrol=this.checked;topluCiz()"> Kontrol ettim: <b>'+sec.filter(i=>(Number(tp.gp.oneri[i.il])||0)>0).length+' ile toplam '+tl(oTop)+'</b> gönderilecek.</label>'+
+      '<button class="btn ana" style="width:100%;margin-top:10px" '+(tp.gp.kontrol?'':'disabled')+' onclick="gPlanKaydet()">Gönderim kayıtlarını oluştur</button>':'')+
+    '</div>';
+  $('panel').innerHTML=h; panelAc();
+}
+function gOner(){
+  const tp=S.tp, sec=S.veri.iller.filter(i=>tp.iller.indexOf(i.il)>=0&&i.planlanmamis>0.004);
+  if(!sec.length){ toast('Önce il seçin.'); return; }
+  const top=sec.reduce((s,i)=>s+i.planlanmamis,0), b=sayiOku(tp.gp.butce);
+  const hedef = (b===''||Number.isNaN(b)||!(b>0)) ? top : Math.min(b,top);
+  tp.gp.oneri={}; let kalan=r2c(hedef);
+  sec.forEach((i,k)=>{ const v = k===sec.length-1 ? kalan : Math.min(i.planlanmamis, Math.floor(hedef*i.planlanmamis/top)); tp.gp.oneri[i.il]=r2c(v); kalan=r2c(kalan-v); });
+  tp.gp.kontrol=false; topluCiz(); if(b>top) toast('Bütçe, planlanmamış toplamdan büyük; en çok '+tl0(top)+' önerildi.');
+}
+function gPlanKaydet(){
+  const tp=S.tp, plan=Object.keys(tp.gp.oneri).filter(il=>tp.iller.indexOf(il)>=0&&(Number(tp.gp.oneri[il])||0)>0).map(il=>({il,tutar:Number(tp.gp.oneri[il])}));
+  yuk(true,'Gönderim kayıtları oluşturuluyor…');
+  cagir('gonderimPlanla',[S.oturum.token,S.donem,plan,tp.gp.yazi],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj||'Kaydedilemedi.'); return; }
+    S.veri=r.veri; const yaz=plan.map(p=>p.il).filter(il=>(r.atlanan||[]).every(a=>a.indexOf(il)!==0)); S.tp=null; ciz();
+    topluTikGoster(yaz,'· gönderim planı',()=>{ panelKapat(); tik(r.yazilan+' ile gönderim planlandı'); });
+    toast('✓ '+r.yazilan+' ile gönderim kaydı oluşturuldu'+((r.atlanan||[]).length?' · atlanan: '+r.atlanan.join(', '):'')+'. Sonraki adımlar (2b, 2c, nakit) toplu işlemden girilir.',7000); });
 }
 
 /* ===================== V2.2 · GÖRSEL KATMAN (harita, para akışı, sayaç, iskelet, anında açılış, kayıt tiki) ===================== */
