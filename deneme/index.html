@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="author" content="AHMET KÜÇÜKYAĞCI">
-<meta name="unides-surum" content="2.4">
+<meta name="unides-surum" content="2.5">
 <!-- ÜNİDES Nakit Takip V2 – Tüm Dönemler · ekran · ANA ADRES (19.11.2026 geçiş) · eski v13 ekranı: eski_v13_index.html · Yazar: AHMET KÜÇÜKYAĞCI -->
 <meta name="theme-color" content="#6b2d5c">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
@@ -126,6 +126,7 @@ input.g:focus,select.g:focus,textarea.g:focus{outline:2px solid var(--lac2);outl
 .kucuk{font-size:12.5px;color:var(--soluk)}
 .altkutu{border:1px solid var(--cizgi);border-radius:10px;padding:4px 12px 12px;margin-top:12px;background:#FAFBFD}
 .altkutu.yesilkutu{background:#EEF8F0;border-color:#9FD3AA}
+.altkutu.sarikutu{background:#FFF7E0;border-color:#F0D58A}.altkutu.kirmizikutu{background:#FDECEC;border-color:#E9A3A3}
 .altkutu.mavikutu{background:#F8EEF4;border-color:#D9B3CB}
 .altbaslik{font-weight:600;font-size:14px;color:var(--lac);margin-top:8px}
 a{color:var(--lac2)}
@@ -549,7 +550,8 @@ function veriCiz(){
   let h=donemBaslik()+aktifHtml()+'<div class="ilsec"><select id="ilsec" onchange="ilSec(this.value)"><option value="">— İl seçin —</option>'+
     iller.map(i=>'<option'+(i.il===S.il?' selected':'')+' value="'+esc(i.il)+'">'+esc(i.il)+' · '+esc(birDurum(i))+'</option>').join('')+'</select>'+
     '<button class="toplubtn" onclick="topluAc()" title="Birden fazla ile aynı yazıyı tek seferde işle">⇉ Toplu işlem</button>'+
-    '<button class="toplubtn" onclick="e1Ac()" title="İllerin gönderdiği EK-1 Excel formlarındaki proje tutarlarını toplu aktar">📥 EK-1 yükle</button></div>';
+    '<button class="toplubtn" onclick="e1Ac()" title="İllerin gönderdiği EK-1 Excel formlarındaki proje tutarlarını toplu aktar">📥 EK-1 yükle</button>'+
+    (gli()?'<button class="toplubtn" onclick="mPanelAc()" title="5./6. dönem kalanlarının düşülmesi: Excel, düzeltme, onay">⇅ Kalan düşme</button>':'')+'</div>';
   if(!S.il){ $('ana').innerHTML=h+'<div class="bos">Veri girmek için il seçin.</div>'; return; }
   const t=S.taslak, i=t.il, o=S.veri.iller.find(x=>x.il===S.il);
   h+='<div class="kucuk" style="margin:-2px 0 10px">Durum: '+durumRozet(o)+' · İlin elindeki kalan: <b class="para">'+tl(o.elindeki)+'</b></div>';
@@ -1273,7 +1275,7 @@ function gGozlemci(){
     kpi('Onaylı proje', iller.reduce((s,i)=>s+i.proje,0)+' proje · '+iller.length+' il')+
     kpi('Talep toplamı', tl0(talep), iller.filter(i=>i.talep>0).length+' il')+
     kpi('Düşülen kalan', tl0(dus), kaynakAd()+(uyar?' · ⚠ '+uyar+' ilde kalan onay/bilgi bekliyor':''))+
-    kpi('Gönderilecek net', tl0(net), 'talep − düşülen kalan')+
+    kpi('Gönderilecek net', tl0(net), 'talep − düşülen kalan'+(iller.filter(i=>i.talep>0&&!i.dusmeOnayli).length?' · '+iller.filter(i=>i.talep>0&&!i.dusmeOnayli).length+' ilde düşme onayı bekliyor':''))+
     kpi('Gönderilen', tl0(gon), iller.filter(i=>i.gonderilen>0).length+' il', false, net?gon/net:0)+
     kpi('Henüz gönderilmeyen', tl0(bek), (kismi?kismi+' il kısmen aktarıldı · ':'')+iller.filter(i=>i.bekleyen>0).length+' il', true)+
   '</div>';
@@ -1302,7 +1304,7 @@ function gKart(i){
 }
 
 /* --- il ayrıntısı: düşme tablosu + gönderimler --- */
-function gMahsupTablo(i){
+function gMahsupTablo(i,duzen){
   if(!i.m||!(i.talep>0)) return '<div class="bos" style="padding:10px">Talep girilmedi.</div>';
   const m=i.m, ks=Object.keys(m.dus).sort(), kul=[0,1,2,3,4].filter(j=>m.talep[j]>0||m.dusToplam[j]>0||(i.kodGonderilen||[])[j]>0);
   const ad=kd=>((S.veri.kaynaklar||[]).find(k=>k.id===kd)||{ad:kd+'. Dönem'}).ad;
@@ -1312,6 +1314,7 @@ function gMahsupTablo(i){
       '<td class="s"><b>'+tl(m.net[j])+'</b></td><td class="s">'+tl((i.kodGonderilen||[])[j]||0)+'</td><td class="s">'+tl((i.kodBekleyen||[])[j]||0)+'</td></tr>').join('')+
     '<tr style="font-weight:700"><td>Toplam</td><td class="s">'+tl(i.talep)+'</td>'+ks.map(kd=>{ const t=m.dus[kd].reduce((s,x)=>s+x,0); return '<td class="s">'+(t>0.004?'−'+tl(t):'—')+'</td>'; }).join('')+
     '<td class="s">'+tl(i.net)+'</td><td class="s">'+tl(i.gonderilen)+'</td><td class="s">'+tl(i.bekleyen)+'</td></tr></tbody></table></div>';
+  h=mDurumKutu(i,duzen)+h;
   if(m.uyarilar.length) h+='<div class="uyarik">⚠ '+m.uyarilar.map(esc).join('<br>⚠ ')+'</div>';
   if(m.notlar.length) h+='<div class="kucuk" style="margin-top:6px;background:#F7F2EE;border-radius:8px;padding:6px 10px">ℹ '+m.notlar.map(esc).join('<br>ℹ ')+'</div>';
   return h;
@@ -1339,12 +1342,13 @@ function gVeriBolum(o){
   return '<details class="bolum" '+(t.ac2!==false?'open':'')+' ontoggle="S.taslak.ac2=this.open"><summary>2 · Kalan düşme ve gönderimler<span class="sag kucuk">'+
     (o.talep>0?'net '+tl0(o.net)+' · gönderilen '+tl0(o.gonderilen)+(o.bekleyen>0?' · bekleyen '+tl0(o.bekleyen):''):'')+'</span></summary><div class="gov">'+
     '<div class="kucuk" style="margin-top:10px">Düşülen kalanlar: <b>'+esc(kaynakAd())+'</b>. Tablo, <b>kaydedilmiş</b> talebe göre hesaplanır (talebi değiştirdiyseniz önce kaydedin).</div>'+
-    gMahsupTablo(o)+
+    gMahsupTablo(o,true)+'<div id="mform"></div>'+
     (o.kalanlaKarsilandi?'<div class="altkutu yesilkutu" style="margin-top:12px"><div class="altbaslik">Kalanla karşılandı — nakit gönderilmeyecek</div>'+
       (o.dusulduIsaretli?'<div class="kucuk">✓ '+esc(kaynakAd())+' kalanları “'+esc(D().ad)+' döneminde düşüldü” olarak işaretlendi'+(o.dusulduBilgi?' ('+esc(o.dusulduBilgi)+')':'')+'.</div>':
       '<div class="kucuk" style="margin-bottom:8px">Bu ilin talebinin tamamı kalanlarla karşılandı. İle ayrıca cevap yazıldıktan sonra kalanları düşüldü olarak işaretleyin.</div><button class="btn ana" style="width:100%" onclick="gKalanlaIsaretle()">Kalanları “düşüldü” olarak işaretle</button>')+'</div>':'')+
     '<div class="altbaslik" style="margin-top:14px">Gönderimler</div>'+gGonderimListe(o,true)+
-    (o.talep>0&&o.planlanmamis>0.004?'<button class="btn ana" style="width:100%;margin-top:10px" onclick="gFormAc(0)">+ Yeni gönderim (planlanacak '+tl0(o.planlanmamis)+')</button>':
+    (o.talep>0&&o.planlanmamis>0.004&&!o.dusmeOnayli?'<div class="kucuk uy" style="margin-top:10px">Yeni gönderim için önce kalan düşmesi onaylanmalı'+(yonMu()?' (yukarıdaki düğmeler).':' (Ahmet).')+'</div>':
+     o.talep>0&&o.planlanmamis>0.004?'<button class="btn ana" style="width:100%;margin-top:10px" onclick="gFormAc(0)">+ Yeni gönderim (planlanacak '+tl0(o.planlanmamis)+')</button>':
       (o.talep>0&&o.net>0?'<div class="kucuk" style="margin-top:8px">Net tutarın tamamı gönderimlere dağıtıldı.</div>':''))+
     '<div id="gform"></div></div></details>';
 }
@@ -1387,6 +1391,154 @@ function gSil(no){
     cagir('gonderimSil',[S.oturum.token,S.donem,S.il,no],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj); return; } S.veri=r.veri; taslakKur(S.il); ciz(); tik('Gönderim silindi'); }); },'Gönderim silinsin mi?');
 }
 
+/* --- kalan düşme onayı (20.11.2026, Ahmet): öneri → onay (yönetici); onaysız ile gönderim yok; Excel ile toplu düzelt/onayla --- */
+const yonMu=()=>!!(S.oturum&&S.oturum.rol==='YONETICI');
+const mAd=kd=>((S.veri.kaynaklar||[]).find(k=>k.id===kd)||{ad:kd+'. Dönem'}).ad;
+function mDurumKutu(i,duzen){
+  const o=i.m.onay||{}, y=duzen&&yonMu();
+  let h, renk;
+  if(o.var&&o.gecerli){ renk='yesilkutu'; h='<b>✓ Kalan düşmesi onaylı</b> <span class="kucuk">('+esc(o.kim)+', '+esc(o.zaman)+(o.farkli?' · elle belirlendi':' · sistem önerisi')+')</span>'; }
+  else if(o.var){ renk='kirmizikutu'; h='<b>⛔ Onay geçersiz</b> — kalan ya da talep değişti; düşme yeniden onaylanmalı. Yeni gönderim yapılamaz.'; }
+  else { renk='sarikutu'; h='<b>Öneri — henüz onaylanmadı.</b> Aşağıdaki düşme sistemin önerisidir. '+(y?'Onaylayın ya da düzeltin;':'Ahmet onaylayınca')+' gönderim ancak onaydan sonra yapılabilir.'; }
+  if(y) h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+
+    (!(o.var&&o.gecerli)||o.farkli?'<button class="btn ana" style="padding:6px 12px" onclick="mOneriOnayla()">✓ Sistem önerisini onayla</button>':'')+
+    '<button class="btn ikincil" style="padding:6px 12px" onclick="mDuzenAc()">✎ Elle düzelt</button>'+
+    (o.var?'<button class="btn ikincil" style="padding:6px 12px" onclick="mOnayKaldir()">Onayı kaldır</button>':'')+'</div>';
+  return '<div class="altkutu '+renk+'" style="margin-top:8px;padding:8px 12px">'+h+'</div>';
+}
+function mOneriOnayla(){
+  const o=S.veri.iller.find(x=>x.il===S.il);
+  onayKutusu(S.il+' için sistemin önerdiği kalan düşmesi onaylansın mı?\n\nDüşülen: '+tl(o.m.oneri?Object.values(o.m.oneri.dus).reduce((s,a)=>s+a.reduce((t,x)=>t+x,0),0):0)+'\nOnaydan sonra bu il için gönderim planlanabilir.','Evet, onayla',()=>mGonder([{il:S.il}]),'Kalan düşmesi onayı');
+}
+function mOnayKaldir(){
+  onayKutusu(S.il+' ilinin kalan düşme onayı kaldırılsın mı?\n(Sistem önerisine döner; yeniden onaylanana kadar yeni gönderim yapılamaz.)','Evet, kaldır',()=>{ yuk(true,'Onay kaldırılıyor…');
+    cagir('mahsupOnayKaldir',[S.oturum.token,S.donem,S.il],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj); return; } S.veri=r.veri; S.taslak=Object.assign(taslakKur(S.il),{ac2:true}); ciz(); tik('Onay kaldırıldı'); }); },'Onayı kaldır');
+}
+function mGonder(liste,sonra){
+  yuk(true,'Onaylanıyor…');
+  cagir('mahsupOnayla',[S.oturum.token,S.donem,liste],r=>{ yuk(false);
+    if(!r.ok){ onayKutusu(r.mesaj||'Onaylanamadı.','Tamam',null,'Onaylanamadı'); return; }
+    S.veri=r.veri; if(S.il) S.taslak=Object.assign(taslakKur(S.il),{ac2:true}); ciz();
+    if(sonra) sonra(r); else tik(r.yazilan+' il onaylandı');
+    if((r.hatalar||[]).length) onayKutusu(r.yazilan+' il onaylandı.\n\nOnaylanamayan:\n• '+r.hatalar.join('\n• '),'Tamam',null,'Bazı iller onaylanamadı'); });
+}
+/* elle düzelt (tek il) */
+function mDuzenAc(){
+  const o=S.veri.iller.find(x=>x.il===S.il), m=o.m, ks=m.kalanlar;
+  S.md={dus:Object.fromEntries(ks.map(k=>[k.id,(m.dus[k.id]||[0,0,0,0,0]).slice()]))};
+  const kul=[0,1,2,3,4].filter(j=>m.talep[j]>0||ks.some(k=>k.kod[j]>0)||m.dusToplam[j]>0);
+  let h='<div class="altkutu" style="margin-top:10px"><div class="altbaslik">✎ Kalan düşmesini elle belirle · '+esc(S.il)+'</div>'+
+    '<div class="kucuk" style="margin-bottom:6px">Her kaynak için, bu ilin hangi kod talebinden ne kadar düşüleceğini yazın. Bir kaynaktan düşülen toplam o kaynağın kalanını, bir koddan düşülen toplam o kodun talebini aşamaz. Düşülmeyen kalan sonraki döneme devreder.</div>'+
+    ks.filter(k=>!k.ok).map(k=>'<div class="kucuk uy">⚠ '+esc(k.neden)+'</div>').join('')+
+    '<div style="overflow-x:auto"><table class="t" style="min-width:'+(260+ks.length*260)+'px"><thead><tr><th>Kod</th><th style="text-align:right">Talep</th>'+
+    ks.map(k=>'<th style="text-align:right">'+esc(k.ad)+' kalanı</th><th style="text-align:right">Öneri</th><th style="text-align:right">Düşülecek</th>').join('')+'<th style="text-align:right">Net</th></tr></thead><tbody>'+
+    kul.map(j=>'<tr><td>'+GKOD[j]+'</td><td class="s">'+tl(m.talep[j])+'</td>'+ks.map(k=>'<td class="s">'+(k.kod[j]?tl(k.kod[j]):'—')+'</td><td class="s kucuk">'+tl(m.oneri.dus[k.id][j])+'</td><td class="s">'+
+      (k.ok?'<input class="g" style="max-width:130px;text-align:right" inputmode="decimal" value="'+(S.md.dus[k.id][j]?sayiYaz(S.md.dus[k.id][j]):'')+'" oninput="S.md.dus[\''+k.id+'\']['+j+']=sayiOku(this.value);mDuzenHesap()">':'<span class="kucuk">düşülemez</span>')+'</td>').join('')+
+      '<td class="s"><b id="mnet'+j+'"></b></td></tr>').join('')+
+    '</tbody></table></div><div id="mozet" style="margin-top:8px;background:#F7F2EE;border-radius:8px;padding:8px 10px;line-height:1.7"></div>'+
+    '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn ana" style="flex:1" id="mkaydet" onclick="mDuzenKaydet()">✓ Bu düşmeyi onayla</button><button class="btn ikincil" onclick="$(\'mform\').innerHTML=\'\'">Vazgeç</button></div></div>';
+  $('mform').innerHTML=h; mDuzenHesap(); $('mform').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function mKontrol(i,dus){
+  const m=i.m, h=[];
+  m.kalanlar.forEach(k=>{ const a=dus[k.id]||[0,0,0,0,0]; if(a.some(x=>Number.isNaN(x)||x<0)) h.push(k.ad+': tutar anlaşılamadı'); const t=a.reduce((s,x)=>s+(Number(x)||0),0);
+    if(t>0.004&&!k.ok) h.push(k.ad+': bu kaynaktan düşülemez'); else if(t>k.kalan+0.004) h.push(k.ad+' kalanından düşülecek toplam ('+tl(t)+') kalandan ('+tl(k.kalan)+') fazla'); });
+  [0,1,2,3,4].forEach(j=>{ const t=m.kalanlar.reduce((s,k)=>s+(Number((dus[k.id]||[])[j])||0),0); if(t>m.talep[j]+0.004) h.push(GKOD[j]+' için düşülecek toplam ('+tl(t)+') talepten ('+tl(m.talep[j])+') fazla'); });
+  return h;
+}
+function mDuzenHesap(){
+  const o=S.veri.iller.find(x=>x.il===S.il), m=o.m, d=S.md.dus;
+  [0,1,2,3,4].forEach(j=>{ const e=$('mnet'+j); if(e) e.textContent=tl(m.talep[j]-m.kalanlar.reduce((s,k)=>s+(Number(d[k.id][j])||0),0)); });
+  const h=mKontrol(o,d);
+  $('mozet').innerHTML=m.kalanlar.map(k=>{ const t=d[k.id].reduce((s,x)=>s+(Number(x)||0),0); return esc(k.ad)+': kalan '+tl(k.kalan)+' · düşülecek <b>'+tl(t)+'</b>'+(k.ok&&k.kalan-t>0.004?' · devredecek '+tl(k.kalan-t):''); }).join('<br>')+
+    '<br>Net (gönderilecek): <b class="para">'+tl(m.talep.reduce((s,x)=>s+x,0)-m.kalanlar.reduce((s,k)=>s+d[k.id].reduce((t,x)=>t+(Number(x)||0),0),0))+'</b>'+
+    (h.length?'<div class="uy" style="margin-top:6px">⛔ '+h.map(esc).join('<br>⛔ ')+'</div>':'');
+  const b=$('mkaydet'); if(b) b.disabled=h.length>0;
+}
+function mDuzenKaydet(){
+  const o=S.veri.iller.find(x=>x.il===S.il); if(mKontrol(o,S.md.dus).length) return;
+  const dus=Object.fromEntries(Object.keys(S.md.dus).map(k=>[k,S.md.dus[k].map(x=>Number(x)||0)]));
+  onayKutusu(S.il+' için bu kalan düşmesi onaylansın mı?','Evet, onayla',()=>mGonder([{il:S.il,dus}],()=>{ tik('Düşme onaylandı'); }),'Kalan düşmesi onayı');
+}
+/* panel: Excel indir / yükle / toplu onay */
+function mPanelAc(){ if(S.degisti){ toast('Önce açık ildeki değişiklikleri kaydedin.'); return; } S.mp={dosyalar:[]}; mPanelCiz(); panelAc(); }
+function mPanelCiz(){
+  const l=S.veri.iller.filter(i=>i.talep>0), on=l.filter(i=>i.dusmeOnayli), gec=l.filter(i=>i.m.onay&&i.m.onay.var&&!i.m.onay.gecerli), bek=l.filter(i=>!(i.m.onay&&i.m.onay.var));
+  const d=S.mp.dosyalar, sec=d.filter(x=>x.sec);
+  let h='<div class="ust"><h2>⇅ Kalan düşme · '+esc(D().ad)+'</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
+    '<div class="satirlar">'+sat('Talebi girilen il',String(l.length))+sat('Düşmesi onaylı',on.length+' il')+sat('Onay bekleyen',bek.length+' il'+(bek.length?' ('+bek.map(i=>i.il).join(', ')+')':''))+(gec.length?sat('Onayı geçersiz','<span class="uy">'+gec.length+' il ('+gec.map(i=>esc(i.il)).join(', ')+')</span>',true):'')+'</div>'+
+    '<p class="kucuk">Excel’de il il ve kod kod: '+esc(D().ad)+' talebi, '+esc(kaynakAd())+' kalanları, sistemin önerisi ve düzenlenebilir “DÜŞÜLECEK” sütunları. '+(yonMu()?'Düzeltip geri yükleyin; onayladığınız iller gönderime açılır.':'Onay ve düzeltme Ahmet tarafından yapılır.')+'</p>'+
+    '<button class="btn ana" style="width:100%;margin:6px 0" onclick="mExcelIndir()">⬇ Kalan düşme Excel’ini indir</button>';
+  if(yonMu()){
+    h+='<label class="btn ikincil" style="display:block;text-align:center;margin:6px 0;cursor:pointer">⬆ Düzeltilmiş Excel’i yükle<input type="file" accept=".xlsx,.xls" style="display:none" onchange="mExcelOku(this.files)"></label>';
+    if(bek.length) h+='<button class="btn ikincil" style="width:100%;margin:6px 0" onclick="mTopluOneri()">✓ Onay bekleyen '+bek.length+' ilin sistem önerisini onayla</button>';
+  }
+  if(d.length){
+    const ony=d.filter(x=>x.tip==='onay');
+    h+='<div class="altbaslik" style="margin-top:12px">Yüklenen Excel · '+sec.length+' il onaylanacak</div>'+
+      '<p class="kucuk">Excel’de değiştirdiğiniz iller seçili gelir. Değiştirmediğiniz ama henüz onaylanmamış illeri de onaylamak isterseniz işaretleyin'+(ony.length?' ya da <a href="#" onclick="S.mp.dosyalar.forEach(x=>{ if(x.tip===\'onay\') x.sec=true; });mPanelCiz();return false">'+ony.length+' ilin hepsini seçin</a>':'')+'.</p>'+d.map((x,ix)=>mKart(x,ix)).join('')+
+      '<button class="btn ana" style="width:100%;margin:12px 0" '+(sec.length?'':'disabled ')+'onclick="mYukluOnayla()">✓ Seçilenleri onayla ('+sec.length+' il)</button>';
+  }
+  $('panel').innerHTML=h+'</div>';
+}
+function mExcelIndir(){
+  if(!window.SAHTE){ yuk(true,'Excel hazırlanıyor…');
+    cagir('mahsupExcel',[S.oturum.token,S.donem],r=>{ yuk(false); if(!r.ok){ toast(r.mesaj||'Excel hazırlanamadı.'); return; }
+      const b=atob(r.base64), u=new Uint8Array(b.length); for(let k=0;k<b.length;k++) u[k]=b.charCodeAt(k);
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([u],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=r.ad; document.body.appendChild(a); a.click(); a.remove(); toast('Excel indirildi ('+r.il+' il).'); });
+    return; }
+  e1Kutuphane(()=>{ const ks=S.veri.kaynaklar, R=[['ÜNİDES '+D().ad+' · Kalan düşme çalışma tablosu (önizleme)'],['Yalnız DÜŞÜLECEK sütunlarını değiştirin.'],
+      ['İL','KOD','KOD ADI',D().ad.toLocaleUpperCase('tr-TR')+' TALEBİ'].concat(ks.map(k=>k.ad+' KALANI'),ks.map(k=>'SİSTEM ÖNERİSİ: '+k.ad+' kalanından düşülecek'),ks.map(k=>'DÜŞÜLECEK: '+k.ad+' kalanından'),['NET (GÖNDERİLECEK)','ONAY DURUMU'])];
+    S.veri.iller.filter(i=>i.talep>0).forEach(i=>[0,1,2,3,4].filter(j=>i.m.talep[j]>0||i.m.kalanlar.some(k=>k.kod[j]>0)).forEach(j=>R.push([i.il,GKOD[j],KKODAD[GKOD[j]]||'',i.m.talep[j]].concat(i.m.kalanlar.map(k=>k.kod[j]),ks.map(k=>i.m.oneri.dus[k.id][j]),ks.map(k=>i.m.dus[k.id][j]),[i.m.net[j],i.dusmeOnayli?'Onaylı':'Öneri']))));
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(R),'KALAN DÜŞME'); XLSX.writeFile(wb,'Kalan_Dusme_onizleme.xlsx'); toast('Excel indirildi (önizleme: biçimsiz).'); });
+}
+function mTopluOneri(){
+  const bek=S.veri.iller.filter(i=>i.talep>0&&!(i.m.onay&&i.m.onay.var));
+  onayKutusu(bek.length+' ilin kalan düşmesi sistem önerisiyle onaylanacak:\n'+bek.map(i=>i.il).join(', ')+'\n\nOnaydan sonra bu iller için gönderim planlanabilir.','Evet, onayla',()=>mGonder(bek.map(i=>({il:i.il})),r=>{ mPanelCiz(); tik(r.yazilan+' il onaylandı'); }),'Toplu onay');
+}
+function mExcelOku(fl){
+  const f=fl&&fl[0]; if(!f) return; yuk(true,'Excel okunuyor…');
+  e1Kutuphane(()=>{ const rd=new FileReader(); rd.onload=e=>{ yuk(false); try{ S.mp.dosyalar=mCoz(new Uint8Array(e.target.result)); }catch(err){ toast('Excel okunamadı: '+(err&&err.message||err)); return; } mPanelCiz();
+      const h=S.mp.dosyalar.filter(x=>x.tip==='hata').length; toast(S.mp.dosyalar.length+' il okundu'+(h?', '+h+' ilde hata (kırmızı)':'')+'.'); }; rd.readAsArrayBuffer(f); });
+}
+function mCoz(veri){
+  const wb=XLSX.read(veri,{type:'array'}), sn=wb.SheetNames.find(n=>e1Ust(n)==='KALAN DÜŞME');
+  if(!sn) throw new Error('"KALAN DÜŞME" sayfası yok — sistemden indirilen kalan düşme Excel’i değil');
+  const R=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''}), bs=R.findIndex(r=>e1Ust(r[0])==='İL'&&e1Ust(r[1])==='KOD');
+  if(bs<0) throw new Error('Başlık satırı (İL · KOD) bulunamadı');
+  const B=R[bs].map(e1Ust), ks=S.veri.kaynaklar, sut={}; ks.forEach(k=>sut[k.id]=B.findIndex(v=>v.indexOf(e1Ust('DÜŞÜLECEK: '+k.ad))===0));
+  if(ks.some(k=>sut[k.id]<0)) throw new Error('DÜŞÜLECEK sütunları bulunamadı ('+ks.map(k=>k.ad).join(', ')+')');
+  const g={};
+  let sonIl='';
+  for(let r=bs+1;r<R.length;r++){ const kod=e1Ust(R[r][1]); const il=e1Ust(R[r][0])||(kod?sonIl:''); if(il) sonIl=il; if(!il||!kod||kod==='TOPLAM') continue;   // il hücresi birleştirilmiş olabilir
+    const x=g[il]=g[il]||{il,satir:[],hatalar:[]}; x.satir.push({kod,v:Object.fromEntries(ks.map(k=>[k.id,e1Sayi(R[r][sut[k.id]])]))}); }
+  return Object.values(g).map(x=>{
+    const i=S.veri.iller.find(y=>e1Ust(y.il)===x.il); const o={il:i?i.il:x.il,hatalar:[],tip:'hata',sec:false,degisen:[]};
+    if(!i){ o.hatalar.push('il bulunamadı'); return o; } if(!(i.talep>0)){ o.hatalar.push('talep girilmemiş'); return o; }
+    const dus=Object.fromEntries(ks.map(k=>[k.id,[0,0,0,0,0]]));
+    x.satir.forEach(s=>{ let j=GKOD.indexOf(s.kod); if(j<0&&s.kod===e1Ust(i.digerKod||'')) j=4; if(j<0){ o.hatalar.push('tanınmayan kod: '+s.kod); return; }
+      ks.forEach(k=>{ const n=s.v[k.id]; if(n===''||n==null) return; if(Number.isNaN(n)){ o.hatalar.push(s.kod+' / '+k.ad+': sayı değil'); return; } dus[k.id][j]=n; }); });
+    o.hatalar=o.hatalar.concat(mKontrol(i,dus)); if(o.hatalar.length) return o;
+    o.dus=dus; const m=i.m;
+    ks.forEach(k=>[0,1,2,3,4].forEach(j=>{ if(Math.abs(dus[k.id][j]-m.dus[k.id][j])>0.004) o.degisen.push({k:k.ad,kod:GKOD[j],eski:m.dus[k.id][j],yeni:dus[k.id][j]}); }));
+    o.oneridenFarkli=ks.some(k=>dus[k.id].some((n,j)=>Math.abs(n-m.oneri.dus[k.id][j])>0.004));
+    o.tip=i.dusmeOnayli&&!o.degisen.length?'ayni':(o.degisen.length?'degisik':'onay'); o.sec=o.tip==='degisik';
+    o.netYeni=m.talep.reduce((s,t,j)=>s+t-ks.reduce((a,k)=>a+dus[k.id][j],0),0); o.netEski=i.net;
+    return o; }).sort((a,b)=>({hata:0,degisik:1,onay:2,ayni:3}[a.tip]-{hata:0,degisik:1,onay:2,ayni:3}[b.tip])||a.il.localeCompare(b.il,'tr'));
+}
+function mKart(x,ix){
+  const renk={hata:'#FBE3E3',ayni:'#EEF0F2',degisik:'#FFF4D6',onay:'#E4F1E8'}[x.tip], et={hata:'Onaylanamaz',ayni:'Onaylı düşmeyle aynı – işlem gerekmez',degisik:'Düşme değişiyor',onay:'Değişiklik yok – henüz onaylanmamış'}[x.tip];
+  return '<div style="border:1px solid var(--cizgi);border-radius:12px;padding:10px 12px;margin:8px 0;background:'+renk+'"><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" style="margin-top:4px;width:18px;height:18px" '+(x.sec?'checked ':'')+(x.tip==='hata'||x.tip==='ayni'?'disabled ':'')+'onchange="S.mp.dosyalar['+ix+'].sec=this.checked;mPanelCiz()">'+
+    '<div style="flex:1;min-width:0"><b>'+esc(x.il)+'</b> · <span class="kucuk">'+et+(x.oneridenFarkli?' · sistem önerisinden farklı':'')+'</span>'+
+    (x.tip!=='hata'?'<div class="kucuk">Net: '+(Math.abs(x.netYeni-x.netEski)>0.004?'<s>'+tl(x.netEski)+'</s> → ':'')+'<b class="para">'+tl(x.netYeni)+'</b></div>':'')+'</div></label>'+
+    (x.hatalar.length?'<div style="color:#9A1F1F;margin-top:6px">'+x.hatalar.map(m=>'⛔ '+esc(m)).join('<br>')+'</div>':'')+
+    (x.degisen.length?'<div class="kucuk" style="margin-top:6px">'+x.degisen.map(c=>esc(c.k)+' · '+c.kod+': <s>'+tl(c.eski)+'</s> → <b>'+tl(c.yeni)+'</b>').join('<br>')+'</div>':'')+'</div>';
+}
+function mYukluOnayla(){
+  const l=S.mp.dosyalar.filter(x=>x.sec); if(!l.length) return;
+  onayKutusu(l.length+' ilin kalan düşmesi onaylanacak:\n'+l.map(x=>x.il+(x.tip==='degisik'?' (değişiyor)':'')).join(', ')+'\n\nOnaydan sonra bu iller için gönderim planlanabilir.','Evet, onayla',
+    ()=>mGonder(l.map(x=>({il:x.il,dus:x.dus})),r=>{ S.mp.dosyalar.forEach(x=>{ if(x.sec&&!(r.hatalar||[]).some(h=>h.indexOf(x.il+':')===0)){ x.sec=false; x.tip='ayni'; } }); mPanelCiz(); panelAc(); tik(r.yazilan+' il onaylandı'); }),'Kalan düşmesi onayı');
+}
 /* --- "Henüz gönderilmeyenler" listesi + Excel --- */
 function gBekleyenSatirlar(){
   const r=[]; S.veri.iller.filter(i=>i.talep>0&&i.bekleyen>0.004).forEach(i=>[0,1,2,3,4].forEach(j=>{ const b=(i.kodBekleyen||[])[j]||0; if(b>0.004) r.push({il:i.il,kod:GKOD[j],net:i.m.net[j],gon:(i.kodGonderilen||[])[j]||0,yolda:r2c(((i.kodPlanlanan||[])[j]||0)-((i.kodGonderilen||[])[j]||0)),bek:b,durum:birDurum(i)}); }));
@@ -1423,15 +1575,16 @@ function gBekleyenExcel(){
 /* --- toplu: bütçeye göre gönderim planı --- */
 function gPlanCiz(){
   const tp=S.tp; tp.gp=tp.gp||{butce:'',oneri:{},yazi:{yTarih:'',ySayi:''},kontrol:false};
-  const l=S.veri.iller.filter(i=>i.talep>0&&i.planlanmamis>0.004), q=tp.ara.trim().toLocaleUpperCase('tr-TR');
+  const l=S.veri.iller.filter(i=>i.talep>0&&i.planlanmamis>0.004&&i.dusmeOnayli), q=tp.ara.trim().toLocaleUpperCase('tr-TR'), onaysiz=S.veri.iller.filter(i=>i.talep>0&&i.planlanmamis>0.004&&!i.dusmeOnayli);
   const sec=l.filter(i=>tp.iller.indexOf(i.il)>=0), plTop=sec.reduce((s,i)=>s+i.planlanmamis,0), oTop=sec.reduce((s,i)=>s+(Number(tp.gp.oneri[i.il])||0),0);
   let h='<div class="ust"><h2>⇉ Gönderim planla · '+esc(D().ad)+'</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
     '<div class="adimlar" style="margin-top:0">'+TADIM.map(x=>'<button class="'+(x.id===tp.adim?'on':'')+'" onclick="S.tp.adim=\''+x.id+'\';S.tp.d={};topluCiz()"><b>'+esc(x.ad)+'</b><span class="kucuk">'+esc(x.ac)+'</span></button>').join('')+'</div>'+
     '<div class="altbaslik" style="margin-top:16px">1 · Hangi iller? <span class="kucuk" style="font-weight:400">(planlanmamış net tutarı olan iller · '+sec.length+' seçili · '+tl0(plTop)+')</span></div>'+
-    '<div class="seg" style="margin-top:6px"><button type="button" onclick="S.tp.iller='+"S.veri.iller.filter(i=>i.talep>0&&i.planlanmamis>0.004).map(i=>i.il)"+';topluCiz()">Tümünü seç</button><button type="button" onclick="S.tp.iller=[];S.tp.gp.oneri={};topluCiz()">Seçimi temizle</button></div>'+
+    '<div class="seg" style="margin-top:6px"><button type="button" onclick="S.tp.iller='+"S.veri.iller.filter(i=>i.talep>0&&i.planlanmamis>0.004&&i.dusmeOnayli).map(i=>i.il)"+';topluCiz()">Tümünü seç</button><button type="button" onclick="S.tp.iller=[];S.tp.gp.oneri={};topluCiz()">Seçimi temizle</button></div>'+
     '<input class="ara" style="margin:8px 0 0" placeholder="İl ara…" value="'+esc(tp.ara)+'" oninput="S.tp.ara=this.value;topluCiz()">'+
     '<div class="ilsecliste">'+l.filter(i=>!q||i.il.indexOf(q)>=0).map(i=>'<label><input type="checkbox" '+(tp.iller.indexOf(i.il)>=0?'checked':'')+' onchange="topluIl(\''+esc(i.il)+'\',this.checked)"> <span><b>'+esc(i.il)+'</b> <span class="kucuk">· planlanmamış '+tl0(i.planlanmamis)+(i.gonderilen>0?' · gönderilen '+tl0(i.gonderilen):'')+'</span>'+
       (i.m.uyarilar.some(u=>u.indexOf('onay bekliyor')>=0||u.indexOf('bilinmiyor')>=0)?' <span class="uy" style="font-weight:400">⚠ kalan onay/bilgi bekliyor</span>':'')+'</span></label>').join('')+'</div>'+
+    (onaysiz.length?'<div class="kucuk uy" style="margin-top:6px">Kalan düşmesi onaylanmadığı için listede olmayan '+onaysiz.length+' il: '+onaysiz.map(i=>esc(i.il)).join(', ')+' (⇅ Kalan düşme ekranından onaylanır).</div>':'')+
     '<div class="altbaslik" style="margin-top:16px">2 · Bu sefer gönderilecek toplam (bütçe)</div>'+
     '<div class="iki"><div class="alan"><label>Bütçe (TL) — boş bırakılırsa seçilen illerin tamamı</label><input class="g" inputmode="decimal" value="'+esc(tp.gp.butce)+'" onchange="S.tp.gp.butce=this.value" oninput="S.tp.gp.butce=this.value"></div>'+
     '<div class="alan"><label>&nbsp;</label><button class="btn ikincil" style="width:100%" onclick="gOner()">Oranla öner</button></div></div>'+
