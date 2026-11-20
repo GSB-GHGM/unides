@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="author" content="AHMET KÜÇÜKYAĞCI">
-<meta name="unides-surum" content="2.6">
+<meta name="unides-surum" content="2.6.1">
 <!-- ÜNİDES Nakit Takip V2 – Tüm Dönemler · ekran · ANA ADRES (19.11.2026 geçiş) · eski v13 ekranı: eski_v13_index.html · Yazar: AHMET KÜÇÜKYAĞCI -->
 <meta name="theme-color" content="#6b2d5c">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
@@ -1149,6 +1149,14 @@ const TADIM=[
   {id:'2c',ad:'2c · Ödeme emri',ac:'Ödeme emri belgesinin tarihi ve numarası',alan:[['hTarih','Ödeme emri tarihi','date'],['hNo','Ödeme emri no','text']],bekleyen:'3'},
   {id:'2n',ad:'2c · Nakit karşılanma',ac:'Nakit karşılanma tarihi (girilince “Nakit aktarıldı”)',alan:[['nTarih','Nakit karşılanma tarihi','date']],bekleyen:'3'},
   {id:'gp',ad:'Gönderim planla',ac:'Bütçeye göre illere gönderilecek tutar (kısmi gönderim) · yalnız 7. dönem ve sonrası',alan:[],bekleyen:'1',gonderimli:true}];
+/* İl bu adımı bekliyor mu? 2c ile nakit aynı aşamada (3 · Hazine sürecinde): ödeme emri girilen il 2c listesinden çıkar, nakit listesine geçer (20.11.2026, Ahmet). */
+const odemeEmriVar=i=>!!(i.hTarih&&String(i.hNo||'').trim());
+function adimBekliyor(i,a){
+  if(String(i.aktDurum).charAt(0)!==a.bekleyen) return false;
+  if(a.id==='2c') return !odemeEmriVar(i);
+  if(a.id==='2n') return odemeEmriVar(i);
+  return true;
+}
 function sirauyari(i,a){
   if(a.id==='2b'&&i.yonetime!=='Evet') return '2a (yönetime yazı) girilmemiş';
   if(a.id==='2c'&&!i.aTarih) return '2b (aktarım yazısı) girilmemiş';
@@ -1164,7 +1172,7 @@ function topluAc(_ok){
 function topluCiz(){
   if(S.tp.adim==='gp'&&gli()) return gPlanCiz();
   const tp=S.tp, a=TADIM.find(x=>x.id===tp.adim), l=S.veri.iller.filter(i=>i.talep>0||i.proje>0);
-  const aday=l.filter(i=>tp.hepsi || String(i.aktDurum).charAt(0)===a.bekleyen || tp.iller.indexOf(i.il)>=0);
+  const aday=l.filter(i=>tp.hepsi || adimBekliyor(i,a) || tp.iller.indexOf(i.il)>=0);
   const q=tp.ara.trim().toLocaleUpperCase('tr-TR');
   const secili=l.filter(i=>tp.iller.indexOf(i.il)>=0);
   let h='<div class="ust"><h2>⇉ Toplu işlem · '+esc(D().ad)+'</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
@@ -1188,7 +1196,7 @@ function topluIl(il,ac){ const a=S.tp.iller, k=a.indexOf(il); if(ac&&k<0) a.push
 function topluTumu(ac){
   const tp=S.tp, a=TADIM.find(x=>x.id===tp.adim), q=tp.ara.trim().toLocaleUpperCase('tr-TR');
   if(!ac){ tp.iller=[]; return topluCiz(); }
-  S.veri.iller.filter(i=>(i.talep>0||i.proje>0)&&(tp.hepsi||String(i.aktDurum).charAt(0)===a.bekleyen)&&(!q||i.il.indexOf(q)>=0)).forEach(i=>{ if(tp.iller.indexOf(i.il)<0) tp.iller.push(i.il); });
+  S.veri.iller.filter(i=>(i.talep>0||i.proje>0)&&(tp.hepsi||adimBekliyor(i,a))&&(!q||i.il.indexOf(q)>=0)).forEach(i=>{ if(tp.iller.indexOf(i.il)<0) tp.iller.push(i.il); });
   topluCiz();
 }
 function topluOdenek(){ const tp=S.tp; (S.sonOdenek||[]).forEach(il=>{ const k=String(il).toLocaleUpperCase('tr-TR'); if(tp.iller.indexOf(k)<0) tp.iller.push(k); }); tp.hepsi=true; topluCiz(); toast((S.sonOdenek||[]).length+' il seçildi (son indirilen ödenek tablosu).'); }
@@ -1214,8 +1222,12 @@ function topluKaydet(){
   cagir('topluIslem',[S.oturum.token,S.donem,tp.adim,tp.d,tp.iller,uz],r=>{
     yuk(false); if(!r.ok){ toast(r.mesaj||'Kaydedilemedi.'); return; }
     const alan=TADIM.find(x=>x.id===tp.adim).alan[0][0], yaz=tp.iller.filter(il=>{ const i=r.veri.iller.find(x=>x.il===il); return i&&String(i[alan]||'')===String(tp.d[alan]||''); });
-    S.veri=r.veri; S.tp=null; ciz();
-    topluTikGoster(yaz,r.no,()=>{ panelKapat(); tik(r.yazilan+' il işlendi'); });
+    S.veri=r.veri; const SIRA={'2a':'2b','2b':'2c','2c':'2n'}, son=SIRA[tp.adim]; S.tp=null; ciz();
+    topluTikGoster(yaz,r.no,()=>{
+      if(!son){ panelKapat(); tik(r.yazilan+' il işlendi'); return; }
+      // sıradaki adıma geç: işlenen iller seçili gelir (Ahmet: 2c'den sonra nakit karşılamaya geçsin)
+      S.tp={adim:son,d:{},iller:yaz.slice(),hepsi:false,ara:''}; topluCiz();
+      toast('Sıradaki adım: '+TADIM.find(x=>x.id===son).ad+' — az önce işlenen '+yaz.length+' il seçili geldi.',6000); });
     toast('✓ Toplu işlem '+r.no+': '+r.yazilan+' ile işlendi'+(r.atlanan?', '+r.atlanan+' il atlandı (dolu)':'')+'. Geri almak için: Yönetim → Toplu işlemler.',6500);
   });
 }
