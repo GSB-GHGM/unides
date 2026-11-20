@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="author" content="AHMET KÜÇÜKYAĞCI">
-<meta name="unides-surum" content="2.3">
+<meta name="unides-surum" content="2.4">
 <!-- ÜNİDES Nakit Takip V2 – Tüm Dönemler · ekran · ANA ADRES (19.11.2026 geçiş) · eski v13 ekranı: eski_v13_index.html · Yazar: AHMET KÜÇÜKYAĞCI -->
 <meta name="theme-color" content="#6b2d5c">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
@@ -72,8 +72,8 @@ table.t td.s{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nu
 .satirlar{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;background:var(--kart);border:1px solid var(--cizgi);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
 .satirlar span{color:var(--soluk)}
 /* veri girişi */
-.ilsec{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-.ilsec select{flex:1;padding:11px 12px;border:1px solid var(--cizgi);border-radius:10px;background:#fff;font-size:16px}
+.ilsec{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.ilsec select{flex:1 1 220px;min-width:0;padding:11px 12px;border:1px solid var(--cizgi);border-radius:10px;background:#fff;font-size:16px}
 .uyarit{background:var(--turuncu);border:1px solid #F3C49B;color:#7A3A06;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:14px}
 .bolum{background:var(--kart);border:1px solid var(--cizgi);border-radius:12px;margin-bottom:10px;overflow:hidden}
 .bolum>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600;display:flex;align-items:center;gap:8px}
@@ -548,7 +548,8 @@ function veriCiz(){
   const iller=S.veri.iller.filter(i=>i.proje>0);
   let h=donemBaslik()+aktifHtml()+'<div class="ilsec"><select id="ilsec" onchange="ilSec(this.value)"><option value="">— İl seçin —</option>'+
     iller.map(i=>'<option'+(i.il===S.il?' selected':'')+' value="'+esc(i.il)+'">'+esc(i.il)+' · '+esc(birDurum(i))+'</option>').join('')+'</select>'+
-    '<button class="toplubtn" onclick="topluAc()" title="Birden fazla ile aynı yazıyı tek seferde işle">⇉ Toplu işlem</button></div>';
+    '<button class="toplubtn" onclick="topluAc()" title="Birden fazla ile aynı yazıyı tek seferde işle">⇉ Toplu işlem</button>'+
+    '<button class="toplubtn" onclick="e1Ac()" title="İllerin gönderdiği EK-1 Excel formlarındaki proje tutarlarını toplu aktar">📥 EK-1 yükle</button></div>';
   if(!S.il){ $('ana').innerHTML=h+'<div class="bos">Veri girmek için il seçin.</div>'; return; }
   const t=S.taslak, i=t.il, o=S.veri.iller.find(x=>x.il===S.il);
   h+='<div class="kucuk" style="margin:-2px 0 10px">Durum: '+durumRozet(o)+' · İlin elindeki kalan: <b class="para">'+tl(o.elindeki)+'</b></div>';
@@ -721,6 +722,164 @@ function kaydet(zorla){
   });
 }
 
+/* ===================== EK-1 EXCEL'LERİNİ YÜKLE (20.11.2026 · Ahmet: Tuba ve Muazzez de kullanır; tutarı olan ilde eski/yeni gösterilip onay istenir) =====================
+   İllerin doldurduğu ÜNİDES EK-1 formu (sayfa "EK-1 TALEP") tarayıcıda okunur; dosya hiçbir yere yüklenmez.
+   Eşleşme: B3 il adı + S.N. (il sıra no) → sistemdeki proje; proje adı karşılaştırılır. Kaydetme mevcut "kaydet" ile, il il yapılır. */
+const E1={dosyalar:[]};
+const e1Ust=s=>String(s==null?'':s).toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim();
+const e1Ad=s=>e1Ust(s).replace(/[^0-9A-ZÇĞİÖŞÜ]+/g,'');
+function e1Sayi(v){
+  if(v===''||v==null) return '';
+  if(typeof v==='number') return isFinite(v)?Math.round(v*100)/100:'';
+  let s=String(v).replace(/[\s₺]|TL/gi,''); if(!s) return '';
+  if(s.indexOf(',')>=0) s=s.replace(/\./g,'').replace(',','.');
+  const n=Number(s); return isFinite(n)?Math.round(n*100)/100:NaN;
+}
+const e1Top=k=>Math.round(k.reduce((s,x)=>s+(Number(x)||0),0)*100)/100;
+const e1Esit=(a,b)=>Math.abs((Number(a)||0)-(Number(b)||0))<0.005;
+function e1Kutuphane(sonra){
+  if(window.XLSX) return sonra();
+  const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=sonra; s.onerror=()=>{ yuk(false); toast('Excel okuyucu yüklenemedi. İnternet bağlantısını kontrol edin.'); }; document.head.appendChild(s);
+}
+function e1Ac(){
+  if(S.degisti){ toast('Önce açık ildeki değişiklikleri kaydedin.'); return; }
+  E1.dosyalar=[]; E1.taban=0; e1Ciz(); panelAc();
+}
+function e1Ciz(){
+  const d=E1.dosyalar, sec=d.filter(x=>x.sec), yeniIl=sec.filter(x=>x.tip==='yeni').length, degIl=sec.filter(x=>x.tip==='degisik').length;
+  let h='<div class="ust"><h2>📥 EK-1 Excel\'lerini yükle · '+esc(D().ad)+'</h2><button class="kapat" onclick="panelKapat()">×</button></div><div class="ic">'+
+    '<p class="kucuk" style="margin-top:0">İllerin gönderdiği EK-1 nakit talep formlarını seçin (birden fazla seçilebilir). Proje tutarları il ve S.N.\'ye göre eşleştirilir; kaydetmeden önce kontrol listesi gösterilir. Dosyalar yalnız bu bilgisayarda okunur, hiçbir yere yüklenmez. Resmî yazı ve kontrol alanları değişmez.</p>'+
+    '<label class="btn ana" style="display:block;text-align:center;margin:8px 0 12px;cursor:pointer">📂 Excel dosyalarını seç<input id="e1dosya" type="file" accept=".xlsx,.xls,.xlsm" multiple style="display:none" onchange="e1Oku(this.files)"></label>';
+  if(d.length){
+    h+='<div class="satirlar">'+sat('Okunan dosya',String(d.length))+sat('Aktarılacak',sec.length+' il ('+yeniIl+' yeni, '+degIl+' önceki tutarın üzerine)')+sat('Aktarılacak talep toplamı','<b>'+tl(sec.reduce((s,x)=>s+x.toplam,0))+'</b>',true)+'</div>';
+    h+=d.map((x,ix)=>e1Kart(x,ix)).join('');
+    h+='<button class="btn ana" style="width:100%;margin:12px 0" '+(sec.length?'':'disabled ')+'onclick="e1Aktar()">✓ Seçilenleri aktar ('+sec.length+' il)</button>';
+  }
+  h+='</div>'; $('panel').innerHTML=h;
+}
+function e1Kart(x,ix){
+  const renk={hata:'#FBE3E3',ayni:'#EEF0F2',degisik:'#FFF4D6',yeni:'#E4F1E8'}[x.tip], etiket={hata:'Aktarılamaz',ayni:'Sistemdekiyle aynı – işlem gerekmez',degisik:'Önceki tutarlar var – eski / yeni karşılaştırın',yeni:'Yeni talep'}[x.tip];
+  let h='<div style="border:1px solid var(--cizgi);border-radius:12px;padding:10px 12px;margin:8px 0;background:'+renk+'">'+
+    '<label style="display:flex;gap:8px;align-items:flex-start;cursor:'+(x.secilebilir?'pointer':'default')+'"><input type="checkbox" style="margin-top:4px;width:18px;height:18px" '+(x.sec?'checked ':'')+(x.secilebilir?'':'disabled ')+'onchange="E1.dosyalar['+ix+'].sec=this.checked;e1Ciz()">'+
+    '<div style="flex:1;min-width:0"><b>'+esc(x.il||'İl okunamadı')+'</b> · <span class="kucuk">'+esc(x.dosya)+'</span><br><span class="kucuk">'+esc(etiket)+'</span>'+
+    (x.tip!=='hata'?'<div class="kucuk" style="margin-top:4px">'+x.eslesen+'/'+x.sistemProje+' proje eşleşti · Formdaki talep <b class="para">'+tl(x.toplam)+'</b>'+(x.tip==='degisik'?' · Sistemdeki <span class="para">'+tl(x.eskiToplam)+'</span> · '+x.degisen.length+' projede değişiklik':'')+'</div>':'')+'</div></label>';
+  if(x.hatalar.length) h+='<div style="color:#9A1F1F;margin-top:6px">'+x.hatalar.map(m=>'⛔ '+esc(m)).join('<br>')+'</div>';
+  if(x.uyarilar.length) h+='<div style="color:#8A5A00;margin-top:6px">'+x.uyarilar.map(m=>'⚠ '+esc(m)).join('<br>')+'</div>';
+  if(x.tip==='degisik'||x.tip==='yeni'){
+    const l=x.tip==='degisik'?x.degisen:x.satirlar.filter(s=>s.p);
+    h+='<details style="margin-top:6px"'+(x.tip==='degisik'?' open':'')+'><summary class="kucuk" style="cursor:pointer">'+(x.tip==='degisik'?'Eski / yeni tutarlar':'Proje tutarları')+' ('+l.length+')</summary><div style="overflow-x:auto"><table class="t" style="min-width:560px"><thead><tr><th>S.N.</th><th>Proje</th>'+
+      KKOD.map(k=>'<th style="text-align:right">'+k+'</th>').join('')+'<th style="text-align:right">Toplam</th></tr></thead><tbody>'+
+      l.map(s=>{ const p=s.p, es=x.tip==='degisik';
+        const hucre=(j)=>{ const y=s.k[j], e=p.k[j]; const fark=es&&!e1Esit(y,e); return '<td class="s"'+(fark?' style="background:#FFE7A3"':'')+'>'+(fark?'<s class="kucuk">'+(e===''||e==null?'—':tl(e))+'</s><br>':'')+(y===''?'—':tl(y))+'</td>'; };
+        return '<tr><td>'+esc(String(s.sn))+'</td><td style="max-width:220px">'+esc(p.ad)+'</td>'+[0,1,2,3,4].map(hucre).join('')+'<td class="s"><b>'+tl(e1Top(s.k))+'</b>'+(es&&!e1Esit(e1Top(s.k),e1Top(p.k))?'<br><s class="kucuk">'+tl(e1Top(p.k))+'</s>':'')+'</td></tr>'; }).join('')+
+      '</tbody></table></div></details>';
+  }
+  return h+'</div>';
+}
+function e1Oku(fl){
+  const l=[...(fl||[])]; if(!l.length) return;
+  yuk(true,'Excel dosyaları okunuyor…');
+  e1Kutuphane(()=>{
+    let kalan=l.length; const sonuc=[];
+    l.forEach((f,ix)=>{ const r=new FileReader();
+      r.onload=e=>{ let x; try{ x=e1Coz(f.name,new Uint8Array(e.target.result)); }catch(err){ x={dosya:f.name,il:'',hatalar:['Dosya okunamadı: '+(err&&err.message||err)],uyarilar:[],tip:'hata'}; } sonuc[ix]=x; if(--kalan===0) e1Bitir(sonuc); };
+      r.onerror=()=>{ sonuc[ix]={dosya:f.name,il:'',hatalar:['Dosya açılamadı'],uyarilar:[],tip:'hata'}; if(--kalan===0) e1Bitir(sonuc); };
+      r.readAsArrayBuffer(f); });
+  });
+}
+function e1Bitir(yeni){
+  yuk(false); if(!E1.taban) E1.taban=S.veri.zaman;
+  const hepsi=E1.dosyalar.concat(yeni), gor={};
+  hepsi.forEach(x=>{ if(x.tip==='hata'||!x.il) return; if(gor[x.il]){ x.tip='hata'; x.hatalar.push('Bu il için birden fazla dosya seçildi ('+gor[x.il]+'). Yalnız birini seçin.'); } else gor[x.il]=x.dosya; });
+  hepsi.forEach(x=>{ x.secilebilir=x.tip==='yeni'||x.tip==='degisik'; if(!x.secilebilir) x.sec=false; else if(x.sec===undefined) x.sec=x.tip==='yeni'&&!x.uyarilar.length; });
+  hepsi.sort((a,b)=>({hata:0,degisik:1,yeni:2,ayni:3}[a.tip]-{hata:0,degisik:1,yeni:2,ayni:3}[b.tip])||String(a.il).localeCompare(String(b.il),'tr'));
+  E1.dosyalar=hepsi; e1Ciz();
+  const n=yeni.length, h=yeni.filter(x=>x.tip==='hata').length; toast(n+' dosya okundu'+(h?', '+h+' dosya aktarılamaz (kırmızı)':'')+'.');
+}
+function e1Coz(ad,veri){
+  const x={dosya:ad,il:'',hatalar:[],uyarilar:[],satirlar:[],degisen:[],toplam:0,eskiToplam:0,eslesen:0,sistemProje:0,tip:'hata'};
+  const wb=XLSX.read(veri,{type:'array'});
+  const sn=wb.SheetNames.find(n=>e1Ust(n)==='EK-1 TALEP')||wb.SheetNames.find(n=>e1Ust(n).indexOf('EK-1')>=0);
+  if(!sn){ x.hatalar.push('"EK-1 TALEP" sayfası yok — ÜNİDES EK-1 formu değil.'); return x; }
+  const R=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''}), H=i=>e1Ust((R[i]||[])[0]);
+  // il ve form kontrolü
+  const ilS=R.findIndex((r,i)=>i<15&&H(i)==='İL');
+  if(ilS<0){ x.hatalar.push('İl hücresi (B3) bulunamadı.'); return x; }
+  const ilAd=e1Ust(R[ilS][1]); x.il=ilAd;
+  if(!ilAd){ x.hatalar.push('Formda il seçilmemiş (B3 boş).'); return x; }
+  const sil=S.veri.iller.find(i=>e1Ust(i.il)===ilAd);
+  if(!sil){ x.hatalar.push('"'+ilAd+'" bu dönemin il listesinde yok.'); return x; }
+  x.il=sil.il;
+  const kj=R[ilS].findIndex(v=>e1Ust(v)==='KONTROL'); let kontrol=''; if(kj>=0) for(let j=kj+1;j<R[ilS].length;j++){ if(String(R[ilS][j]).trim()){ kontrol=String(R[ilS][j]).trim(); break; } }
+  if(kontrol&&e1Ust(kontrol)!=='UYARI YOK') x.uyarilar.push('Formun kendi kontrolü: "'+kontrol+'"');
+  const par=wb.SheetNames.find(n=>e1Ust(n)==='PARAMETRE');
+  if(par){ const P=XLSX.utils.sheet_to_json(wb.Sheets[par],{header:1,raw:true,defval:''}), sur=(P.find(r=>e1Ust(r[0]).indexOf('SÜREÇ')===0)||[])[1];
+    if(sur&&e1Ad(sur)!==e1Ad(D().ad)) x.uyarilar.push('Form "'+sur+'" için hazırlanmış; açık dönem '+D().ad+'.'); }
+  // başlık satırı ve sütunlar
+  const bs=R.findIndex(r=>e1Ust(r[0])==='S.N.');
+  if(bs<0){ x.hatalar.push('Proje tablosunun başlığı (S.N.) bulunamadı.'); return x; }
+  const B=R[bs].map(e1Ust), sut=t=>B.findIndex(v=>v===t), basla=t=>B.findIndex(v=>v.indexOf(t)===0);
+  const kc=['03.02','03.03','03.05','06.01','DİĞER'].map(sut), adc=basla('PROJE ADI'), acc=basla('AÇIKLAMA');
+  if(kc.some(c=>c<0)||adc<0){ x.hatalar.push('Ekonomik kod sütunları (03.02 … DİĞER) beklenen yerde değil.'); return x; }
+  const digerKod=String((R[bs+1]||[])[kc[4]]||'').trim();
+  // satırlar
+  const proj=S.veri.projeler.filter(p=>p.il===sil.il); x.sistemProje=proj.length;
+  for(let i=bs+1;i<R.length;i++){
+    const r=R[i], s=r[0]; if(s===''||isNaN(Number(s))) continue;
+    const k=kc.map(c=>e1Sayi(r[c]));
+    if(k.some(v=>Number.isNaN(v))){ x.hatalar.push('S.N. '+s+': tutar sayı değil ('+kc.map(c=>r[c]).filter(v=>v!=='').join(' / ')+')'); continue; }
+    if(k.some(v=>v!==''&&v<0)){ x.hatalar.push('S.N. '+s+': eksi tutar'); continue; }
+    const p=proj.find(q=>Number(q.sn)===Number(s));
+    const satir={sn:Number(s),ad:String(r[adc]||'').trim(),k,aciklama:acc>=0?String(r[acc]||'').trim():'',p};
+    if(!p){ x.hatalar.push('S.N. '+s+' ('+satir.ad+') sistemde bu ilde yok.'); continue; }
+    if(e1Ad(satir.ad)&&e1Ad(satir.ad)!==e1Ad(p.ad)) x.uyarilar.push('S.N. '+s+': proje adı farklı — formda "'+satir.ad+'", sistemde "'+p.ad+'"');
+    const top=e1Top(k); if(p.ust&&top>p.ust+0.004) x.uyarilar.push('S.N. '+s+': talep '+tl(top)+' üst sınırı ('+tl(p.ust)+') aşıyor');
+    if(!(top>0)&&!satir.aciklama) x.uyarilar.push('S.N. '+s+': talep yok ve açıklama yazılmamış');
+    x.satirlar.push(satir);
+  }
+  if(!x.satirlar.length&&!x.hatalar.length) x.hatalar.push('Formda proje satırı okunamadı. Dosya Excel dışında bir programla kaydedildiyse Excel\'de açıp yeniden kaydedin, sonra tekrar seçin.');
+  const gorulen=new Set(x.satirlar.map(s=>s.sn)), eksik=proj.filter(p=>!gorulen.has(Number(p.sn)));
+  if(eksik.length) x.uyarilar.push(eksik.length+' proje formda yok (S.N. '+eksik.map(p=>p.sn).join(', ')+') — bunlara dokunulmaz');
+  const ciftler=x.satirlar.filter((s,i,a)=>a.findIndex(t=>t.sn===s.sn)!==i); if(ciftler.length) x.hatalar.push('Aynı S.N. iki kez: '+ciftler.map(s=>s.sn).join(', '));
+  if(x.hatalar.length) return x;
+  x.eslesen=x.satirlar.length; x.toplam=e1Top(x.satirlar.map(s=>e1Top(s.k)));
+  x.eskiToplam=e1Top(proj.map(p=>e1Top(p.k)));
+  x.digerKod=e1Top(x.satirlar.map(s=>Number(s.k[4])||0))>0&&/^\d{2}\.\d{2}/.test(digerKod)?digerKod:'';
+  if(e1Top(x.satirlar.map(s=>Number(s.k[4])||0))>0&&!x.digerKod) x.uyarilar.push('DİĞER sütununda tutar var ama ekonomik kodu (J8) yazılmamış');
+  const kDeg=s=>s.k.some((v,j)=>!e1Esit(v,s.p.k[j]))||(s.aciklama&&s.aciklama!==String(s.p.aciklama||''));
+  const doluydu=proj.some(p=>p.k.some(v=>v!==''&&v!=null&&Number(v)!==0));
+  x.degisen=x.satirlar.filter(kDeg);
+  const digerDeg=x.digerKod&&x.digerKod!==String(sil.digerKod||'').trim();
+  x.tip=!x.degisen.length&&!digerDeg?'ayni':(doluydu?'degisik':'yeni');
+  if(x.tip==='degisik'&&digerDeg&&sil.digerKod) x.uyarilar.push('DİĞER kodu değişiyor: '+sil.digerKod+' → '+x.digerKod);
+  return x;
+}
+function e1Aktar(){
+  const l=E1.dosyalar.filter(x=>x.sec); if(!l.length) return;
+  const deg=l.filter(x=>x.tip==='degisik');
+  onayKutusu(l.length+' ilin EK-1 tutarları kaydedilecek ('+l.map(x=>x.il).join(', ')+').'+(deg.length?'\n\n'+deg.length+' ilde ('+deg.map(x=>x.il).join(', ')+') sistemdeki önceki tutarların üzerine yazılacak.':'')+'\n\nHer il ayrı kaydedilir ve Excel güncellenir; il başına birkaç saniye sürer.','Evet, aktar',()=>e1Sira(l,0,[]),'EK-1 aktarımı');
+}
+function e1Sira(l,n,sonuc){
+  if(n>=l.length) return e1Son(sonuc);
+  const x=l[n], o=S.veri.iller.find(i=>i.il===x.il);
+  yuk(true,'Aktarılıyor '+(n+1)+'/'+l.length+': '+x.il+'…');
+  const byR={}; S.veri.projeler.filter(p=>p.il===x.il).forEach(p=>byR[p.r]=p);
+  const projeler=x.satirlar.map(s=>{ const p=byR[s.p.r]||s.p; return {r:p.r,k:s.k,aciklama:s.aciklama||p.aciklama||'',durum:p.durum,harcanan:p.harcanan,aciklama2:p.aciklama2}; });
+  const veri={il:x.digerKod&&x.digerKod!==String(o.digerKod||'').trim()?{digerKod:x.digerKod}:{},projeler};
+  cagir('kaydet',[S.oturum.token,S.donem,x.il,veri,E1.taban||S.veri.zaman,false],r=>{
+    if(r.ok){ S.veri=r.veri; x.sec=false; x.tip='ayni'; x.secilebilir=false; sonuc.push([x.il,true,r.degisiklikYok?'değişiklik yoktu':'kaydedildi'+(r.excel&&r.excel.ok===false?' (Excel güncellenemedi)':'')]); }
+    else sonuc.push([x.il,false,r.cakisma?'siz dosyayı okurken başka biri bu ili değiştirdi — dosyayı yeniden okuyun':(r.mesaj||'kaydedilemedi')]);
+    e1Sira(l,n+1,sonuc);
+  },m=>{ sonuc.push([x.il,false,m]); e1Sira(l,n+1,sonuc); });
+}
+function e1Son(sonuc){
+  yuk(false);
+  if(S.il) S.taslak=taslakKur(S.il);
+  const iyi=sonuc.filter(s=>s[1]), kotu=sonuc.filter(s=>!s[1]);
+  ciz(); e1Ciz(); panelAc();
+  onayKutusu(iyi.length+' il aktarıldı'+(iyi.length?': '+iyi.map(s=>s[0]).join(', '):'')+'.'+(kotu.length?'\n\nAktarılamayan '+kotu.length+' il:\n'+kotu.map(s=>'• '+s[0]+': '+s[2]).join('\n'):''),'Tamam',null,kotu.length?'Aktarım tamamlandı (sorunlu iller var)':'Aktarım tamamlandı');
+}
 /* ===================== ÖDENEK AKTARMA TABLOSU ===================== */
 const SECIMLER=[['iletilecek','Yönetime iletilecekler','1'],['bekleyen','Yönetimden aktarım bekleyenler','2'],['hazine','Hazine sürecindekiler','3'],['aktarilan','Nakdi aktarılanlar','4'],['hepsi','Talebi gelen tüm iller',''],['secili','İl seçerek','']];
 S.od={secim:'iletilecek',haric:true,iller:[]};
